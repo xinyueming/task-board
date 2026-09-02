@@ -1,3 +1,7 @@
 # GitHub CLI 凭据与登录临时文件 —— 绝不提交
 .gh-cli/
 gh_login.txt
+
+# 本地 git 凭据与临时 HOME（含 token，绝不提交）
+.git-credentials
+.githome/
