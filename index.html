@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>任务看板系统</title>
+<style>
+/* ===== Reset & Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: linear-gradient(135deg, #0f0c29 0%, #1a1a3e 40%, #16213e 100%);
+  min-height: 100vh; color: #e0e0e0; overflow-x: hidden;
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+
+/* ===== Login Page ===== */
+#loginPage {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #0f0c29 0%, #1a1a3e 40%, #16213e 100%);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+#loginPage.hidden { opacity: 0; transform: scale(1.05); pointer-events: none; }
+.login-card {
+  background: rgba(255,255,255,0.06); backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
+  padding: 48px 40px; width: 400px; max-width: 90vw;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+}
+.login-card .logo { text-align: center; margin-bottom: 32px; }
+.login-card .logo .icon { font-size: 48px; }
+.login-card .logo h1 { font-size: 24px; font-weight: 700; margin-top: 12px;
+  background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent; background-clip: text; }
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 6px; }
+.form-group input {
+  width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.06); color: #fff; font-size: 15px; outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.form-group input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.2); }
+.form-group input::placeholder { color: rgba(255,255,255,0.25); }
+.btn-primary {
+  width: 100%; padding: 12px; border: none; border-radius: 10px;
+  background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; font-size: 16px;
+  font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(102,126,234,0.4); }
+.btn-primary:active { transform: translateY(0); }
+.login-error { color: #ff6b6b; font-size: 13px; margin-top: 12px; text-align: center; display: none; }
+.login-error.show { display: block; }
+.login-hint { text-align: center; margin-top: 16px; font-size: 12px; color: rgba(255,255,255,0.3); }
+
+/* ===== Main Layout ===== */
+#mainApp {
+  display: none; flex-direction: column; min-height: 100vh;
+}
+#mainApp.show { display: flex; }
+
+/* ===== Header ===== */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 32px; background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.header-left { display: flex; align-items: center; gap: 12px; }
+.header-left .icon { font-size: 28px; }
+.header-left h1 { font-size: 20px; font-weight: 700;
+  background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent; background-clip: text; }
+.header-right { display: flex; align-items: center; gap: 16px; }
+.header-user { font-size: 14px; color: rgba(255,255,255,0.6); }
+.btn-logout {
+  padding: 8px 20px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+  background: transparent; color: rgba(255,255,255,0.7); font-size: 13px; cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-logout:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.3); }
+
+/* ===== Kanban Board ===== */
+.kanban-wrapper { flex: 1; padding: 24px 32px 200px; overflow-x: auto; }
+.kanban-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; min-width: 900px; }
+
+/* ===== Column ===== */
+.column { display: flex; flex-direction: column; }
+.column-header {
+  display: flex; align-items: center; gap: 10px; padding: 14px 16px;
+  border-radius: 12px 12px 0 0; font-weight: 600; font-size: 15px;
+}
+.column-header .count {
+  margin-left: auto; background: rgba(255,255,255,0.1); padding: 2px 10px;
+  border-radius: 12px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.7);
+}
+.col-pending .column-header { background: linear-gradient(135deg, #4A90D9, #357ABD); }
+.col-processing .column-header { background: linear-gradient(135deg, #F5A623, #E0961A); }
+.col-completed .column-header { background: linear-gradient(135deg, #7ED321, #6BBF1E); }
+.col-cancelled .column-header { background: linear-gradient(135deg, #9B9B9B, #7A7A7A); }
+
+.column-body {
+  flex: 1; min-height: 200px; padding: 12px; border-radius: 0 0 12px 12px;
+  background: rgba(255,255,255,0.03); border: 2px dashed transparent;
+  transition: background 0.3s, border-color 0.3s;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.column-body.drag-over { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.2); }
+.column-body.empty { justify-content: center; align-items: center; }
+.empty-hint { color: rgba(255,255,255,0.15); font-size: 13px; pointer-events: none; }
+
+/* ===== Task Card ===== */
+.task-card {
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; padding: 14px 16px; cursor: grab;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  user-select: none;
+}
+.task-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.task-card:active { cursor: grabbing; }
+.task-card.dragging { opacity: 0.4; transform: scale(0.95); }
+.task-card.drag-indicator-top { border-top: 2px solid #667eea; }
+.task-card.drag-indicator-bottom { border-bottom: 2px solid #667eea; }
+
+.task-id {
+  font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4);
+  letter-spacing: 0.5px; margin-bottom: 4px; cursor: pointer;
+  display: inline-block; padding: 1px 6px; border-radius: 4px;
+  background: rgba(255,255,255,0.05); transition: background 0.2s;
+}
+.task-id:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); }
+.task-title {
+  font-size: 14px; font-weight: 500; margin-bottom: 4px; cursor: pointer;
+  line-height: 1.4; color: #e8e8e8; transition: color 0.2s;
+}
+.task-title:hover { color: #667eea; }
+.task-source { font-size: 12px; color: rgba(255,255,255,0.35); margin-bottom: 10px; }
+.task-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.task-actions button {
+  padding: 5px 14px; border: none; border-radius: 6px; font-size: 12px;
+  font-weight: 500; cursor: pointer; transition: all 0.2s;
+}
+.btn-start { background: rgba(74,144,217,0.25); color: #6BA3E0; }
+.btn-start:hover { background: rgba(74,144,217,0.4); }
+.btn-complete { background: rgba(126,211,33,0.25); color: #8FE04A; }
+.btn-complete:hover { background: rgba(126,211,33,0.4); }
+.btn-cancel { background: rgba(155,155,155,0.2); color: #B0B0B0; }
+.btn-cancel:hover { background: rgba(155,155,155,0.35); }
+.btn-view-reason { background: rgba(155,155,155,0.15); color: #B0B0B0; }
+.btn-view-reason:hover { background: rgba(155,155,155,0.3); }
+.btn-delete {
+  background: rgba(255,77,77,0.15); color: #FF6B6B;
+  padding: 5px 10px; border: none; border-radius: 6px; font-size: 11px;
+  font-weight: 500; cursor: pointer; transition: all 0.2s;
+  opacity: 0.5; margin-left: auto;
+}
+.btn-delete:hover { background: rgba(255,77,77,0.3); opacity: 1; }
+
+/* ===== Trash / Recycle Bin ===== */
+.trash-container {
+  position: fixed; bottom: 220px; left: 24px; z-index: 90;
+  display: flex; flex-direction: column; align-items: flex-start;
+  user-select: none;
+}
+.trash-container.dragging {
+  transition: none !important;
+}
+.trash-icon-wrap {
+  position: relative; cursor: grab;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: rgba(25,25,50,0.85); backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; transition: all 0.3s; user-select: none;
+}
+.trash-icon-wrap:hover { background: rgba(255,77,77,0.18); border-color: rgba(255,77,77,0.3); transform: scale(1.08); }
+.trash-icon-wrap.dragging {
+  opacity: 0.85;
+  transform: scale(1.15);
+}
+.trash-icon-wrap.drag-over { background: rgba(255,77,77,0.35); border-color: #FF6B6B; transform: scale(1.15); box-shadow: 0 0 24px rgba(255,77,77,0.35); }
+.trash-icon-wrap:active, .trash-icon-wrap.grabbing { cursor: grabbing; }
+.trash-badge {
+  position: absolute; top: -3px; right: -3px; z-index: 2;
+  min-width: 18px; height: 18px; border-radius: 9px;
+  background: #FF6B6B; color: #fff; font-size: 11px; font-weight: 700;
+  display: none; align-items: center; justify-content: center;
+  padding: 0 4px; box-shadow: 0 0 6px rgba(255,77,77,0.4);
+}
+.trash-panel {
+  position: absolute; left: 60px; top: 0;
+  width: 340px; max-height: 380px; overflow-y: auto;
+  background: rgba(22,22,45,0.96); backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 14px;
+  padding: 14px; box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  display: none; animation: fadeUp 0.25s ease;
+}
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.trash-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px; padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.trash-panel-title { font-size: 14px; font-weight: 600; color: #ccc; }
+.trash-panel-title span { color: #FF6B6B; }
+.btn-trash-clear {
+  background: rgba(255,77,77,0.12); color: #FF6B6B; border: none;
+  padding: 4px 12px; border-radius: 6px; font-size: 11px; cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-trash-clear:hover { background: rgba(255,77,77,0.25); }
+.trash-empty {
+  text-align: center; padding: 28px 0; color: rgba(255,255,255,0.25);
+  font-size: 13px;
+}
+.trash-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; margin-bottom: 6px;
+  background: rgba(255,255,255,0.03); border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.2s;
+}
+.trash-item:hover { background: rgba(255,255,255,0.06); }
+.trash-item-info { flex: 1; min-width: 0; }
+.trash-item-id { font-size: 11px; color: #889; font-weight: 600; }
+.trash-item-title { font-size: 12px; color: #ccc; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trash-item-time { font-size: 10px; color: rgba(255,255,255,0.25); margin-top: 2px; }
+.btn-restore {
+  flex-shrink: 0; background: rgba(102,126,234,0.15); color: #8899ee;
+  border: none; padding: 5px 10px; border-radius: 6px; font-size: 11px;
+  cursor: pointer; transition: background 0.2s; font-weight: 500;
+}
+.btn-restore:hover { background: rgba(102,126,234,0.3); }
+.trash-panel::-webkit-scrollbar { width: 4px; }
+.trash-panel::-webkit-scrollbar-track { background: transparent; }
+.trash-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+/* ===== Floating New Task Button ===== */
+.btn-new-task {
+  position: fixed; bottom: 220px; right: 32px; z-index: 50;
+  width: 56px; height: 56px; border-radius: 50%; border: none;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff; font-size: 28px; cursor: pointer;
+  box-shadow: 0 8px 30px rgba(102,126,234,0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.btn-new-task:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 12px 40px rgba(102,126,234,0.5); }
+.btn-new-task:active { transform: scale(0.95); }
+.btn-new-task-label {
+  position: fixed; bottom: 234px; right: 96px; z-index: 50;
+  font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.6);
+  background: rgba(0,0,0,0.5); padding: 4px 14px; border-radius: 8px;
+  backdrop-filter: blur(8px); pointer-events: none;
+}
+
+/* ===== Statistics Panel ===== */
+.stats-panel {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
+  background: rgba(20,20,45,0.95); backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 20px 32px; max-height: 200px;
+}
+.stats-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.stats-header h3 { font-size: 15px; font-weight: 600; }
+.stats-controls { display: flex; align-items: center; gap: 12px; }
+.stats-controls label { font-size: 12px; color: rgba(255,255,255,0.5); }
+.stats-controls input[type="date"] {
+  padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.06); color: #e0e0e0; font-size: 13px; outline: none;
+  color-scheme: dark;
+}
+.stats-controls input[type="date"]:focus { border-color: #667eea; }
+.stats-query-btn {
+  padding: 6px 18px; border: none; border-radius: 6px;
+  background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: transform 0.2s;
+}
+.stats-query-btn:hover { transform: translateY(-1px); }
+.stats-export-btn {
+  padding: 6px 14px; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
+  background: transparent; color: rgba(255,255,255,0.6); font-size: 12px; cursor: pointer;
+  transition: all 0.2s;
+}
+.stats-export-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.3); }
+
+.stats-body { display: flex; align-items: flex-end; gap: 24px; height: 80px; }
+.stat-bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.stat-bar-track { width: 100%; height: 48px; background: rgba(255,255,255,0.04); border-radius: 6px; position: relative; overflow: hidden; }
+.stat-bar-fill {
+  position: absolute; bottom: 0; left: 0; width: 100%; height: 0%;
+  border-radius: 6px; transition: height 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.stat-bar-label { font-size: 12px; font-weight: 500; }
+.stat-bar-count { font-size: 13px; font-weight: 700; color: #fff; }
+.bar-pending .stat-bar-fill { background: linear-gradient(180deg, #4A90D9, #357ABD); }
+.bar-processing .stat-bar-fill { background: linear-gradient(180deg, #F5A623, #E0961A); }
+.bar-completed .stat-bar-fill { background: linear-gradient(180deg, #7ED321, #6BBF1E); }
+.bar-cancelled .stat-bar-fill { background: linear-gradient(180deg, #9B9B9B, #7A7A7A); }
+.bar-pending .stat-bar-label { color: #4A90D9; }
+.bar-processing .stat-bar-label { color: #F5A623; }
+.bar-completed .stat-bar-label { color: #7ED321; }
+.bar-cancelled .stat-bar-label { color: #9B9B9B; }
+
+/* ===== Modal Overlay ===== */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+  padding: 20px; animation: fadeIn 0.2s ease;
+}
+.modal-overlay.show { display: flex; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+.modal-card {
+  background: rgba(30,30,60,0.95); backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 16px;
+  padding: 32px; width: 480px; max-width: 100%; max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.6); animation: slideUp 0.25s ease;
+}
+.modal-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 24px;
+  background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent; background-clip: text; }
+.modal-card .form-group textarea {
+  width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.06); color: #fff; font-size: 14px; outline: none;
+  resize: vertical; min-height: 80px; font-family: inherit;
+  transition: border-color 0.3s;
+}
+.modal-card .form-group textarea:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.2); }
+.modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+.modal-actions .btn-primary { flex: 1; }
+.btn-secondary {
+  flex: 1; padding: 12px; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
+  background: transparent; color: rgba(255,255,255,0.7); font-size: 15px; font-weight: 500;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.06); }
+.detail-field { margin-bottom: 16px; }
+.detail-field .label { font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 4px; }
+.detail-field .value { font-size: 14px; color: #e8e8e8; line-height: 1.5; }
+.detail-field .value.reason { color: #ff6b6b; padding: 8px 12px; background: rgba(255,107,107,0.08); border-radius: 8px; }
+.status-badge {
+  display: inline-block; padding: 2px 12px; border-radius: 12px; font-size: 12px; font-weight: 500;
+}
+.status-badge.pending { background: rgba(74,144,217,0.2); color: #4A90D9; }
+.status-badge.processing { background: rgba(245,166,35,0.2); color: #F5A623; }
+.status-badge.completed { background: rgba(126,211,33,0.2); color: #7ED321; }
+.status-badge.cancelled { background: rgba(155,155,155,0.2); color: #9B9B9B; }
+
+/* ===== Responsive ===== */
+@media (max-width: 1100px) {
+  .kanban-board { grid-template-columns: repeat(2, 1fr); }
+  .kanban-wrapper { padding: 16px 16px 200px; }
+}
+@media (max-width: 640px) {
+  .kanban-board { grid-template-columns: 1fr; min-width: 0; }
+  .header { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+  .header-left h1 { font-size: 16px; }
+  .stats-panel { padding: 16px; }
+  .stats-body { height: 60px; gap: 12px; }
+  .modal-card { padding: 24px 20px; }
+  .btn-new-task { bottom: 170px; right: 20px; width: 48px; height: 48px; font-size: 24px; }
+  .btn-new-task-label { display: none; }
+}
+</style>
+<!-- Supabase 客户端库（UMD 全局版，暴露 window.supabase） -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body>
+
+<!-- ===== Login Page ===== -->
+<div id="loginPage">
+  <div class="login-card">
+    <div class="logo">
+      <div class="icon">📋</div>
+      <h1>任务看板系统</h1>
+    </div>
+
+    <!-- 登录模式 -->
+    <div id="loginMode">
+      <div class="form-group">
+        <label>邮箱</label>
+        <input type="email" id="loginUser" placeholder="请输入邮箱" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" id="loginPass" placeholder="请输入密码" autocomplete="current-password">
+      </div>
+      <button class="btn-primary" id="loginBtn">登 录</button>
+      <div class="login-error" id="loginError">登录失败，请检查邮箱和密码</div>
+      <div class="login-hint">还没有账号？<a href="javascript:void(0)" id="gotoRegister" style="color:#667eea;">立即注册</a></div>
+    </div>
+
+    <!-- 注册模式 -->
+    <div id="registerMode" style="display:none;">
+      <div class="form-group">
+        <label>邮箱</label>
+        <input type="email" id="regUser" placeholder="请输入邮箱" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" id="regPass" placeholder="请输入密码（至少 6 位）" autocomplete="new-password">
+      </div>
+      <button class="btn-primary" id="registerBtn">注 册</button>
+      <div class="login-error" id="registerError">注册失败，请稍后再试</div>
+      <div class="login-hint">已有账号？<a href="javascript:void(0)" id="gotoLogin" style="color:#667eea;">返回登录</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Main App ===== -->
+<div id="mainApp">
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <span class="icon">📋</span>
+      <h1>任务看板系统</h1>
+    </div>
+    <div class="header-right">
+      <span class="header-user" id="headerUser">👤 admin</span>
+      <button class="btn-logout" id="logoutBtn">退出登录</button>
+    </div>
+  </header>
+
+  <!-- Kanban Board -->
+  <div class="kanban-wrapper">
+    <div class="kanban-board">
+
+      <!-- 待处理 -->
+      <div class="column col-pending">
+        <div class="column-header">📥 待处理 <span class="count" id="count-pending">0</span></div>
+        <div class="column-body" data-status="pending" id="col-pending">
+          <div class="empty-hint">暂无任务</div>
+        </div>
+      </div>
+
+      <!-- 处理中 -->
+      <div class="column col-processing">
+        <div class="column-header">⚙️ 处理中 <span class="count" id="count-processing">0</span></div>
+        <div class="column-body" data-status="processing" id="col-processing">
+          <div class="empty-hint">暂无任务</div>
+        </div>
+      </div>
+
+      <!-- 已完成 -->
+      <div class="column col-completed">
+        <div class="column-header">✅ 已完成 <span class="count" id="count-completed">0</span></div>
+        <div class="column-body" data-status="completed" id="col-completed">
+          <div class="empty-hint">暂无任务</div>
+        </div>
+      </div>
+
+      <!-- 已取消 -->
+      <div class="column col-cancelled">
+        <div class="column-header">🚫 已取消 <span class="count" id="count-cancelled">0</span></div>
+        <div class="column-body" data-status="cancelled" id="col-cancelled">
+          <div class="empty-hint">暂无任务</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Floating New Task Button -->
+  <button class="btn-new-task" id="btnNewTask" title="新建任务">＋</button>
+  <span class="btn-new-task-label">新建任务</span>
+
+  <!-- Statistics Panel -->
+  <div class="stats-panel">
+    <div class="stats-header">
+      <h3>📊 任务统计</h3>
+      <div class="stats-controls">
+        <label>从</label>
+        <input type="date" id="statsStart">
+        <label>到</label>
+        <input type="date" id="statsEnd">
+        <button class="stats-query-btn" id="statsQuery">查询</button>
+        <button class="stats-export-btn" id="statsExport">📥 导出 CSV</button>
+      </div>
+    </div>
+    <div class="stats-body" id="statsBody">
+      <div class="stat-bar-group bar-pending">
+        <div class="stat-bar-count" id="statsCount-pending">0</div>
+        <div class="stat-bar-track"><div class="stat-bar-fill" id="statsBar-pending"></div></div>
+        <div class="stat-bar-label">待处理</div>
+      </div>
+      <div class="stat-bar-group bar-processing">
+        <div class="stat-bar-count" id="statsCount-processing">0</div>
+        <div class="stat-bar-track"><div class="stat-bar-fill" id="statsBar-processing"></div></div>
+        <div class="stat-bar-label">处理中</div>
+      </div>
+      <div class="stat-bar-group bar-completed">
+        <div class="stat-bar-count" id="statsCount-completed">0</div>
+        <div class="stat-bar-track"><div class="stat-bar-fill" id="statsBar-completed"></div></div>
+        <div class="stat-bar-label">已完成</div>
+      </div>
+      <div class="stat-bar-group bar-cancelled">
+        <div class="stat-bar-count" id="statsCount-cancelled">0</div>
+        <div class="stat-bar-track"><div class="stat-bar-fill" id="statsBar-cancelled"></div></div>
+        <div class="stat-bar-label">已取消</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Trash / Recycle Bin ===== -->
+<div class="trash-container" id="trashContainer">
+  <div class="trash-panel" id="trashPanel">
+    <div class="trash-panel-header">
+      <div class="trash-panel-title">🗑 回收站 <span id="trashCount">0</span></div>
+      <button class="btn-trash-clear" id="trashClearBtn" onclick="clearTrash()">清空</button>
+    </div>
+    <div id="trashList"></div>
+  </div>
+  <div class="trash-icon-wrap" id="trashIcon" title="回收站 — 拖拽任务到此删除">
+    <span class="trash-badge" id="trashBadge">0</span>
+    🗑️
+  </div>
+</div>
+
+<!-- ===== Modal: New Task ===== -->
+<div class="modal-overlay" id="modalNewTask">
+  <div class="modal-card">
+    <h2>📝 新建任务</h2>
+    <div class="form-group">
+      <label>任务标题 *</label>
+      <input type="text" id="newTaskTitle" placeholder="请输入任务标题">
+    </div>
+    <div class="form-group">
+      <label>任务描述</label>
+      <textarea id="newTaskDesc" placeholder="请输入任务描述（选填）"></textarea>
+    </div>
+    <div class="form-group">
+      <label>客户来源</label>
+      <input type="text" id="newTaskSource" placeholder="请输入客户来源">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modalNewTask')">取消</button>
+      <button class="btn-primary" id="confirmNewTask">确认创建</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: Task Detail ===== -->
+<div class="modal-overlay" id="modalDetail">
+  <div class="modal-card">
+    <h2 id="detailTitle">📄 任务详情</h2>
+    <div id="detailContent"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modalDetail')" style="flex:0 0 auto; padding: 10px 32px;">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: Cancel Reason ===== -->
+<div class="modal-overlay" id="modalCancel">
+  <div class="modal-card">
+    <h2>❌ 取消任务</h2>
+    <p style="color:rgba(255,255,255,0.5); font-size:14px; margin-bottom:16px;">请填写取消原因：</p>
+    <div class="form-group">
+      <textarea id="cancelReasonInput" placeholder="请输入取消原因（必填）" style="min-height:100px;"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modalCancel')">返回</button>
+      <button class="btn-primary" id="confirmCancel" style="background:linear-gradient(135deg,#e74c3c,#c0392b);">确认取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: View Cancel Reason ===== -->
+<div class="modal-overlay" id="modalViewReason">
+  <div class="modal-card">
+    <h2>🚫 取消原因</h2>
+    <div id="viewReasonContent"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modalViewReason')" style="flex:0 0 auto; padding: 10px 32px;">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  DATA
+// ============================================================
+const STORAGE_KEY = 'kanban_tasks';
+const STATUS_LABELS = { pending: '待处理', processing: '处理中', completed: '已完成', cancelled: '已取消' };
+
+// ---- Supabase 初始化 ----
+const SUPABASE_URL = 'https://xhiioyuxsbiodlzvodcy.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhoaWlveXV4c2Jpb2RsenZvZGN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3MDY0NzUsImV4cCI6MjEwNDI4MjQ3NX0.k2LGLWY6SvworB88jyc376UtUWiEln_MPHil05Z_gXU';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let tasks = [];
+let currentUser = null;
+let dragData = null;          // { taskId, fromStatus, fromIndex }
+let pendingCancel = null;     // { taskId, toStatus, toIndex } — deferred cancel action
+let nextSeq = 1;
+
+// ============================================================
+//  INIT
+// ============================================================
+function init() {
+  setDefaultDates();
+  setupEventListeners();
+  // 检查 Supabase 是否已有会话（已登录则直接进入）
+  supabase.auth.getSession().then(({ data }) => {
+    if (data.session) {
+      currentUser = data.session.user;
+      enterApp();
+      loadCloudTasks();
+    }
+  });
+}
+
+function setDefaultDates() {
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const first = new Date(y, m, 1);
+  const last = new Date(y, m + 1, 0);
+  document.getElementById('statsStart').value = toDateStr(first);
+  document.getElementById('statsEnd').value = toDateStr(last);
+}
+
+function toDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// ============================================================
+//  CLOUD DATA LAYER (Supabase)
+// ============================================================
+
+// 把当前 tasks + deletedTasks 全量同步到云端（upsert）。
+// deletedTasks 用 deleted_at 标记写入同一张 tasks 表；活跃任务 deleted_at=null。
+async function syncTasksToCloud() {
+  if (!currentUser) return;
+  const rows = [];
+  tasks.forEach(t => rows.push({ ...toCloudRow(t), deleted_at: null }));
+  deletedTasks.forEach(t => rows.push({ ...toCloudRow(t), deleted_at: t.deletedAt || new Date().toISOString() }));
+  if (rows.length === 0) return;
+  const { error } = await supabase
+    .from('tasks')
+    .upsert(rows, { onConflict: 'id' });
+  if (error) console.error('Sync tasks failed:', error.message);
+}
+
+// 把前端任务对象映射为数据库行字段
+function toCloudRow(t) {
+  return {
+    id: t.id,
+    user_id: currentUser.id,
+    title: t.title,
+    description: t.description || '',
+    source: t.source || '',
+    status: t.status,
+    order: t.order || 0,
+    cancel_reason: t.cancelReason || '',
+    created_at: t.createdAt || new Date().toISOString(),
+    updated_at: t.updatedAt || new Date().toISOString()
+  };
+}
+
+// 把数据库行映射回前端任务对象
+function fromCloudRow(r) {
+  return {
+    id: r.id,
+    title: r.title,
+    description: r.description || '',
+    source: r.source || '',
+    status: r.status,
+    order: r.order || 0,
+    cancelReason: r.cancel_reason || '',
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    deletedAt: r.deleted_at || null
+  };
+}
+
+// 保存入口：同步到云端（保留原函数名，所有 CRUD 均可继续调用）
+async function saveToStorage() {
+  await syncTasksToCloud();
+}
+
+// 从云端加载该用户任务（含回收站）。首次登录若云端为空而 localStorage 有旧数据，则迁移。
+async function loadCloudTasks() {
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .order('created_at', { ascending: true });
+  if (error) {
+    console.error('Load tasks failed:', error.message);
+    return;
+  }
+  const active = (data || []).filter(r => !r.deleted_at);
+  const deleted = (data || []).filter(r => r.deleted_at);
+
+  // 若云端没有任何任务，尝试迁移 localStorage 旧数据
+  if (data.length === 0 && localStorage.getItem(STORAGE_KEY)) {
+    let migrated = false;
+    try {
+      const local = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      const localTasks = local.tasks || [];
+      if (localTasks.length > 0) {
+        // 逐条搬入云端
+        const rows = localTasks.map(t => {
+          migrated = true;
+          return { ...toCloudRow(t), deleted_at: null };
+        });
+        const localDeleted = (local.deletedTasks || []).map(t => {
+          migrated = true;
+          return { ...toCloudRow(t), deleted_at: t.deletedAt || new Date().toISOString() };
+        });
+        const allRows = rows.concat(localDeleted);
+        if (allRows.length) {
+          const { error: upErr } = await supabase.from('tasks').upsert(allRows, { onConflict: 'id' });
+          if (upErr) console.error('Migration upsert failed:', upErr.message);
+        }
+      }
+      if (migrated) localStorage.removeItem(STORAGE_KEY); // 迁移成功后清空本地
+    } catch (e) {
+      console.error('Local migration parse failed:', e.message);
+    }
+    // 迁移后重新拉一次
+    const reload = await supabase.from('tasks').select('*').order('created_at', { ascending: true });
+    const rd = reload.data || [];
+    tasks = rd.filter(r => !r.deleted_at).map(fromCloudRow);
+    deletedTasks = rd.filter(r => r.deleted_at).map(fromCloudRow);
+    gcTrash();
+  } else {
+    tasks = active.map(fromCloudRow);
+    deletedTasks = deleted.map(fromCloudRow);
+    gcTrash();
+    // 备份任务数，生成 id 序号用
+    nextSeq = tasks.length + 1;
+  }
+  renderAll();
+}
+
+// 兼容旧调用：初始化时直接加载（seed 仅在无人登录时的本地演示，这里不再用）
+function seedDemoData() {
+  // Supabase 模式下不再提供演示假数据
+  tasks = [];
+  deletedTasks = [];
+}
+
+// ============================================================
+//  AUTH
+// ============================================================
+async function doLogin() {
+  const email = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value.trim();
+  if (!email || !pass) {
+    document.getElementById('loginError').classList.add('show');
+    return;
+  }
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    document.getElementById('loginError').textContent = '登录失败：' + (error.message || '请检查邮箱和密码');
+    document.getElementById('loginError').classList.add('show');
+    return;
+  }
+  currentUser = data.user;
+  document.getElementById('loginError').classList.remove('show');
+  enterApp();
+  await loadCloudTasks();
+}
+
+async function doRegister() {
+  const email = document.getElementById('regUser').value.trim();
+  const pass = document.getElementById('regPass').value.trim();
+  if (!email || !pass) {
+    document.getElementById('registerError').classList.add('show');
+    return;
+  }
+  if (pass.length < 6) {
+    document.getElementById('registerError').textContent = '密码至少 6 位';
+    document.getElementById('registerError').classList.add('show');
+    return;
+  }
+  const { data, error } = await supabase.auth.signUp({ email, password: pass });
+  if (error) {
+    document.getElementById('registerError').textContent = '注册失败：' + (error.message || '请稍后再试');
+    document.getElementById('registerError').classList.add('show');
+    return;
+  }
+  // 若开启了邮箱验证，会话可能为空；否则直接进入
+  if (data.session) {
+    currentUser = data.user;
+    document.getElementById('registerError').classList.remove('show');
+    enterApp();
+    await loadCloudTasks();
+  } else {
+    document.getElementById('registerError').textContent = '注册成功！请到邮箱点击验证链接后登录。';
+    document.getElementById('registerError').classList.add('show');
+  }
+}
+
+async function doLogout() {
+  await supabase.auth.signOut();
+  currentUser = null;
+  document.getElementById('mainApp').classList.remove('show');
+  document.getElementById('loginPage').classList.remove('hidden');
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginError').classList.remove('show');
+  document.getElementById('registerError').classList.remove('show');
+  showLoginMode();
+}
+
+function enterApp() {
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('mainApp').classList.add('show');
+  const email = (currentUser && currentUser.email) ? currentUser.email : '用户';
+  document.getElementById('headerUser').textContent = '👤 ' + email;
+}
+
+function showLoginMode() {
+  document.getElementById('loginMode').style.display = 'block';
+  document.getElementById('registerMode').style.display = 'none';
+}
+function showRegisterMode() {
+  document.getElementById('loginMode').style.display = 'none';
+  document.getElementById('registerMode').style.display = 'block';
+}
+
+// ============================================================
+//  TASK ID GENERATION
+// ============================================================
+function genTaskId() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const seq = String(nextSeq).padStart(3, '0');
+  nextSeq++;
+  return `TASK-${y}${m}${d}-${seq}`;
+}
+
+// ============================================================
+//  TASK CRUD
+// ============================================================
+function createTask(title, desc, source) {
+  const now = new Date().toISOString();
+  const allPending = tasks.filter(t => t.status === 'pending');
+  const maxOrder = allPending.length > 0 ? Math.max(...allPending.map(t => t.order)) : -1;
+  const task = {
+    id: genTaskId(),
+    title: title.trim(),
+    description: (desc || '').trim(),
+    source: (source || '').trim() || '未指定',
+    status: 'pending',
+    order: maxOrder + 1,
+    cancelReason: '',
+    createdAt: now,
+    updatedAt: now
+  };
+  tasks.push(task);
+  saveToStorage();
+  renderAll();
+  return task;
+}
+
+function updateTaskStatus(taskId, newStatus, cancelReason) {
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+  const oldStatus = task.status;
+  task.status = newStatus;
+  task.updatedAt = new Date().toISOString();
+  if (newStatus === 'cancelled') {
+    task.cancelReason = cancelReason || '';
+  }
+  // Place at the end of the new column
+  const sameStatus = tasks.filter(t => t.status === newStatus && t.id !== taskId);
+  task.order = sameStatus.length > 0 ? Math.max(...sameStatus.map(t => t.order)) + 1 : 0;
+  saveToStorage();
+  renderAll();
+}
+
+function reorderTask(taskId, newStatus, targetIndex) {
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+  const oldStatus = task.status;
+  task.status = newStatus;
+  task.updatedAt = new Date().toISOString();
+  // Get all tasks in the target status (excluding the moved task)
+  let sameStatus = tasks.filter(t => t.status === newStatus && t.id !== taskId);
+  // Insert at targetIndex
+  sameStatus.splice(targetIndex, 0, task);
+  // Reassign order values
+  sameStatus.forEach((t, i) => t.order = i);
+  saveToStorage();
+  renderAll();
+}
+
+function getTasksByStatus(status) {
+  return tasks.filter(t => t.status === status).sort((a, b) => a.order - b.order);
+}
+
+// ============================================================
+//  RENDER
+// ============================================================
+function renderAll() {
+  renderColumns();
+  renderStats();
+  renderTrash();
+}
+
+function renderColumns() {
+  ['pending', 'processing', 'completed', 'cancelled'].forEach(status => {
+    const col = document.getElementById(`col-${status}`);
+    const items = getTasksByStatus(status);
+    document.getElementById(`count-${status}`).textContent = items.length;
+    if (items.length === 0) {
+      col.innerHTML = '<div class="empty-hint">暂无任务</div>';
+      col.classList.add('empty');
+    } else {
+      col.classList.remove('empty');
+      col.innerHTML = items.map(t => renderCard(t)).join('');
+    }
+  });
+}
+
+function renderCard(task) {
+  const status = task.status;
+  let actionHtml = '';
+  if (status === 'pending') {
+    actionHtml = `
+      <button class="btn-start" onclick="event.stopPropagation(); actionStart('${task.id}')">▶ 启动</button>
+      <button class="btn-cancel" onclick="event.stopPropagation(); actionCancel('${task.id}')">✕ 取消</button>
+      <button class="btn-delete" onclick="event.stopPropagation(); actionDelete('${task.id}')" title="删除任务">🗑</button>
+    `;
+  } else if (status === 'processing') {
+    actionHtml = `
+      <button class="btn-complete" onclick="event.stopPropagation(); actionComplete('${task.id}')">✓ 完成</button>
+      <button class="btn-cancel" onclick="event.stopPropagation(); actionCancel('${task.id}')">✕ 取消</button>
+      <button class="btn-delete" onclick="event.stopPropagation(); actionDelete('${task.id}')" title="删除任务">🗑</button>
+    `;
+  } else if (status === 'completed') {
+    actionHtml = `
+      <button class="btn-delete" onclick="event.stopPropagation(); actionDelete('${task.id}')" title="删除任务">🗑 删除</button>
+    `;
+  } else if (status === 'cancelled') {
+    actionHtml = `
+      <button class="btn-view-reason" onclick="event.stopPropagation(); viewCancelReason('${task.id}')">📄 查看原因</button>
+      <button class="btn-delete" onclick="event.stopPropagation(); actionDelete('${task.id}')" title="删除任务">🗑</button>
+    `;
+  }
+
+  return `
+    <div class="task-card" draggable="true" data-task-id="${task.id}"
+         ondragstart="onDragStart(event)" ondragend="onDragEnd(event)"
+         onclick="showDetail('${task.id}')">
+      <div class="task-id" onclick="event.stopPropagation(); showDetail('${task.id}')">${task.id}</div>
+      <div class="task-title" onclick="event.stopPropagation(); showDetail('${task.id}')">${escHtml(task.title)}</div>
+      <div class="task-source">🏷️ ${escHtml(task.source)}</div>
+      <div class="task-actions">${actionHtml}</div>
+    </div>
+  `;
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ============================================================
+//  ACTIONS
+// ============================================================
+function actionStart(taskId) {
+  updateTaskStatus(taskId, 'processing');
+}
+
+function actionComplete(taskId) {
+  updateTaskStatus(taskId, 'completed');
+}
+
+function actionCancel(taskId) {
+  pendingCancel = { taskId, toStatus: 'cancelled' };
+  document.getElementById('cancelReasonInput').value = '';
+  openModal('modalCancel');
+}
+
+function viewCancelReason(taskId) {
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+  document.getElementById('viewReasonContent').innerHTML = `
+    <div class="detail-field">
+      <div class="label">任务编号</div>
+      <div class="value">${task.id}</div>
+    </div>
+    <div class="detail-field">
+      <div class="label">任务标题</div>
+      <div class="value">${escHtml(task.title)}</div>
+    </div>
+    <div class="detail-field">
+      <div class="label">取消原因</div>
+      <div class="value reason">${escHtml(task.cancelReason || '未填写原因')}</div>
+    </div>
+  `;
+  openModal('modalViewReason');
+}
+
+function actionDelete(taskId) {
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+  const msg = `确定要删除任务「${task.id} - ${task.title}」吗？\n任务将移入回收站，7天后自动清除。`;
+  if (!confirm(msg)) return;
+  moveToTrash(task);
+}
+
+// ============================================================
+//  RECYCLE BIN (Trash)
+// ============================================================
+let deletedTasks = [];
+let trashExpanded = false;
+
+function gcTrash() {
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  deletedTasks = deletedTasks.filter(t => new Date(t.deletedAt).getTime() > cutoff);
+}
+
+function moveToTrash(task) {
+  const t = { ...task, deletedAt: new Date().toISOString() };
+  deletedTasks.push(t);
+  tasks = tasks.filter(t => t.id !== task.id);
+  gcTrash();
+  saveToStorage();
+  renderAll();
+}
+
+function restoreTask(taskId) {
+  const idx = deletedTasks.findIndex(t => t.id === taskId);
+  if (idx === -1) return;
+  const task = deletedTasks[idx];
+  delete task.deletedAt;
+  task.updatedAt = new Date().toISOString();
+  // Put back into the same status column, at the end
+  const sameStatus = tasks.filter(t => t.status === task.status);
+  task.order = sameStatus.length > 0 ? Math.max(...sameStatus.map(t => t.order)) + 1 : 0;
+  tasks.push(task);
+  deletedTasks.splice(idx, 1);
+  saveToStorage();
+  renderAll();
+}
+
+async function clearTrash() {
+  if (deletedTasks.length === 0) return;
+  if (!confirm('确定要清空回收站吗？删除的记录将无法恢复。')) return;
+  // 物理删除云端已删除的记录
+  if (currentUser) {
+    const ids = deletedTasks.map(t => t.id);
+    const { error } = await supabase.from('tasks').delete().in('id', ids).not('deleted_at', 'is', null);
+    if (error) console.error('Clear trash delete failed:', error.message);
+  }
+  deletedTasks = [];
+  await saveToStorage();
+  renderTrash();
+}
+
+function toggleTrash() {
+  trashExpanded = !trashExpanded;
+  renderTrash();
+}
+
+function renderTrash() {
+  gcTrash();
+  const icon = document.getElementById('trashIcon');
+  const panel = document.getElementById('trashPanel');
+  const badge = document.getElementById('trashBadge');
+  const list = document.getElementById('trashList');
+  if (!icon) return;
+  // Update badge and panel title count
+  badge.textContent = deletedTasks.length;
+  badge.style.display = deletedTasks.length > 0 ? 'flex' : 'none';
+  const countSpan = document.getElementById('trashCount');
+  if (countSpan) countSpan.textContent = deletedTasks.length;
+  // Toggle panel
+  panel.style.display = trashExpanded ? 'block' : 'none';
+  if (!trashExpanded) return;
+  // Render list
+  if (deletedTasks.length === 0) {
+    list.innerHTML = '<div class="trash-empty">回收站为空</div>';
+    document.getElementById('trashClearBtn').style.display = 'none';
+    return;
+  }
+  document.getElementById('trashClearBtn').style.display = 'inline-block';
+  list.innerHTML = deletedTasks.map(t => {
+    const statusLabel = { pending:'待处理', processing:'处理中', completed:'已完成', cancelled:'已取消' };
+    const statusColor = { pending:'#4A90D9', processing:'#F5A623', completed:'#7ED321', cancelled:'#9B9B9B' };
+    return `<div class="trash-item" data-task-id="${t.id}">
+      <div class="trash-item-info">
+        <div class="trash-item-id">${escHtml(t.id)}</div>
+        <div class="trash-item-title">${escHtml(t.title)}</div>
+        <div class="trash-item-meta">
+          <span style="color:${statusColor[t.status]}">${statusLabel[t.status]||t.status}</span>
+          · 删除于 ${formatTime(t.deletedAt)} · <span style="color:rgba(255,255,255,0.4)">${Math.ceil((Date.now()-new Date(t.deletedAt).getTime())/(24*60*60*1000))}天前</span>
+        </div>
+      </div>
+      <button class="btn-restore" onclick="restoreTask('${t.id}')">↩ 恢复</button>
+    </div>`;
+  }).join('');
+}
+
+function doConfirmCancel() {
+  const reason = document.getElementById('cancelReasonInput').value.trim();
+  if (!reason) {
+    document.getElementById('cancelReasonInput').style.borderColor = '#ff6b6b';
+    document.getElementById('cancelReasonInput').placeholder = '请填写取消原因（必填）';
+    return;
+  }
+  if (pendingCancel) {
+    const task = tasks.find(t => t.id === pendingCancel.taskId);
+    if (task) {
+      task.cancelReason = reason;
+      task.status = 'cancelled';
+      task.updatedAt = new Date().toISOString();
+      const sameStatus = tasks.filter(t => t.status === 'cancelled' && t.id !== task.id);
+      task.order = sameStatus.length > 0 ? Math.max(...sameStatus.map(t => t.order)) + 1 : 0;
+      saveToStorage();
+      renderAll();
+    }
+    pendingCancel = null;
+  }
+  closeModal('modalCancel');
+}
+
+// ============================================================
+//  DETAIL MODAL
+// ============================================================
+function showDetail(taskId) {
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+  document.getElementById('detailTitle').textContent = '📄 任务详情';
+  const statusColor = {
+    pending: 'pending', processing: 'processing', completed: 'completed', cancelled: 'cancelled'
+  };
+  document.getElementById('detailContent').innerHTML = `
+    <div class="detail-field">
+      <div class="label">任务编号</div>
+      <div class="value">${task.id}</div>
+    </div>
+    <div class="detail-field">
+      <div class="label">任务标题</div>
+      <div class="value" style="font-size:18px;font-weight:600;">${escHtml(task.title)}</div>
+    </div>
+    <div class="detail-field">
+      <div class="label">任务描述</div>
+      <div class="value">${escHtml(task.description) || '<span style="color:rgba(255,255,255,0.3)">暂无描述</span>'}</div>
+    </div>
+    <div class="detail-field">
+      <div class="label">客户来源</div>
+      <div class="value">${escHtml(task.source)}</div>
+    </div>
+    <div class="detail-field">
+      <div class="label">当前状态</div>
+      <div class="value"><span class="status-badge ${statusColor[task.status]}">${STATUS_LABELS[task.status]}</span></div>
+    </div>
+    <div class="detail-field">
+      <div class="label">创建时间</div>
+      <div class="value">${formatTime(task.createdAt)}</div>
+    </div>
+    <div class="detail-field">
+      <div class="label">最后更新</div>
+      <div class="value">${formatTime(task.updatedAt)}</div>
+    </div>
+    ${task.cancelReason ? `
+    <div class="detail-field">
+      <div class="label">取消原因</div>
+      <div class="value reason">${escHtml(task.cancelReason)}</div>
+    </div>` : ''}
+  `;
+  openModal('modalDetail');
+}
+
+function formatTime(iso) {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  const s = String(d.getSeconds()).padStart(2, '0');
+  return `${y}-${m}-${day} ${h}:${min}:${s}`;
+}
+
+// ============================================================
+//  MODAL HELPERS
+// ============================================================
+function openModal(id) {
+  document.getElementById(id).classList.add('show');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+  if (id === 'modalCancel') {
+    pendingCancel = null;
+    document.getElementById('cancelReasonInput').style.borderColor = '';
+  }
+}
+
+// ============================================================
+//  DRAG & DROP
+// ============================================================
+let dragTaskId = null;
+let dragFromStatus = null;
+let dragPlaceholder = null;
+
+function onDragStart(e) {
+  const card = e.target.closest('.task-card');
+  if (!card) return;
+  dragTaskId = card.dataset.taskId;
+  const task = tasks.find(t => t.id === dragTaskId);
+  if (!task) { e.preventDefault(); return; }
+  dragFromStatus = task.status;
+  card.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', dragTaskId);
+  // Hide empty hints during drag
+  document.querySelectorAll('.empty-hint').forEach(el => el.style.display = 'none');
+}
+
+function onDragEnd(e) {
+  const card = e.target.closest('.task-card');
+  if (card) card.classList.remove('dragging');
+  document.querySelectorAll('.column-body').forEach(el => {
+    el.classList.remove('drag-over');
+  });
+  document.querySelectorAll('.task-card').forEach(el => {
+    el.classList.remove('drag-indicator-top', 'drag-indicator-bottom');
+  });
+  document.querySelectorAll('.empty-hint').forEach(el => el.style.display = '');
+  dragTaskId = null;
+  dragFromStatus = null;
+}
+
+// Setup global drag/drop events
+document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('dragstart', (e) => {
+    const card = e.target.closest('.task-card');
+    if (!card) return;
+    onDragStart(e);
+  });
+  document.addEventListener('dragend', (e) => {
+    const card = e.target.closest('.task-card');
+    if (card) onDragEnd(e);
+  });
+  document.addEventListener('dragover', (e) => {
+    // Trash icon drag-over
+    if (e.target.closest('#trashIcon')) {
+      if (!dragTaskId) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      document.getElementById('trashIcon').classList.add('drag-over');
+      return;
+    }
+    const col = e.target.closest('.column-body');
+    if (!col || !dragTaskId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    col.classList.add('drag-over');
+    // Show insertion indicator
+    const cards = [...col.querySelectorAll('.task-card')];
+    cards.forEach(c => c.classList.remove('drag-indicator-top', 'drag-indicator-bottom'));
+    const targetCard = e.target.closest('.task-card');
+    if (targetCard) {
+      const rect = targetCard.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      if (e.clientY < midY) {
+        targetCard.classList.add('drag-indicator-top');
+      } else {
+        targetCard.classList.add('drag-indicator-bottom');
+      }
+    }
+  });
+  document.addEventListener('dragleave', (e) => {
+    // Trash icon dragleave
+    if (e.target.closest('#trashIcon') && !e.relatedTarget?.closest('#trashIcon')) {
+      document.getElementById('trashIcon').classList.remove('drag-over');
+    }
+    const col = e.target.closest('.column-body');
+    if (col) {
+      setTimeout(() => {
+        if (!col.contains(e.relatedTarget)) {
+          col.classList.remove('drag-over');
+        }
+      }, 10);
+    }
+    const card = e.target.closest('.task-card');
+    if (card) {
+      card.classList.remove('drag-indicator-top', 'drag-indicator-bottom');
+    }
+    
+  });
+  document.addEventListener('drop', (e) => {
+    e.preventDefault();
+    // Check if dropped on trash icon
+    if (e.target.closest('#trashIcon')) {
+      if (dragTaskId) {
+        document.getElementById('trashIcon').classList.remove('drag-over');
+        const task = tasks.find(t => t.id === dragTaskId);
+        if (task && confirm(`确定要删除任务「${task.id} - ${task.title}」吗？`)) {
+          moveToTrash(task);
+        }
+      }
+      dragTaskId = null;
+      return;
+    }
+    const col = e.target.closest('.column-body');
+    if (!col || !dragTaskId) return;
+    const toStatus = col.dataset.status;
+    const task = tasks.find(t => t.id === dragTaskId);
+    if (!task) return;
+    // Calculate insertion index
+    const cards = [...col.querySelectorAll('.task-card')];
+    let targetIndex = cards.length; // default: end
+    const targetCard = e.target.closest('.task-card');
+    if (targetCard) {
+      const idx = cards.indexOf(targetCard);
+      if (idx !== -1) {
+        const rect = targetCard.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        targetIndex = e.clientY < midY ? idx : idx + 1;
+      }
+    }
+    // If same column, just reorder
+    if (toStatus === dragFromStatus) {
+      reorderTask(dragTaskId, toStatus, targetIndex);
+    } else {
+      // Moving to different column
+      if (toStatus === 'cancelled') {
+        // Need cancel reason
+        pendingCancel = { taskId: dragTaskId, toStatus, toIndex: targetIndex };
+        document.getElementById('cancelReasonInput').value = '';
+        openModal('modalCancel');
+        // The modal confirm will handle the move
+      } else {
+        reorderTask(dragTaskId, toStatus, targetIndex);
+      }
+    }
+    // Cleanup
+    document.querySelectorAll('.column-body').forEach(el => el.classList.remove('drag-over'));
+    document.querySelectorAll('.task-card').forEach(el => {
+      el.classList.remove('drag-indicator-top', 'drag-indicator-bottom');
+    });
+    document.querySelectorAll('.empty-hint').forEach(el => el.style.display = '');
+    dragTaskId = null;
+    dragFromStatus = null;
+  });
+});
+
+// Override confirmCancel for drag-drop case
+document.addEventListener('DOMContentLoaded', () => {
+  const origConfirm = doConfirmCancel;
+  window.doConfirmCancel = function() {
+    const reason = document.getElementById('cancelReasonInput').value.trim();
+    if (!reason) {
+      document.getElementById('cancelReasonInput').style.borderColor = '#ff6b6b';
+      document.getElementById('cancelReasonInput').placeholder = '请填写取消原因（必填）';
+      return;
+    }
+    if (pendingCancel) {
+      const task = tasks.find(t => t.id === pendingCancel.taskId);
+      if (task) {
+        task.cancelReason = reason;
+        if (pendingCancel.toStatus === 'cancelled') {
+          task.status = 'cancelled';
+          task.updatedAt = new Date().toISOString();
+          const sameStatus = tasks.filter(t => t.status === 'cancelled' && t.id !== task.id);
+          if (pendingCancel.toIndex !== undefined && pendingCancel.toIndex <= sameStatus.length) {
+            sameStatus.splice(pendingCancel.toIndex, 0, task);
+          } else {
+            sameStatus.push(task);
+          }
+          sameStatus.forEach((t, i) => t.order = i);
+        } else {
+          task.status = pendingCancel.toStatus;
+          task.updatedAt = new Date().toISOString();
+          const sameStatus = tasks.filter(t => t.status === pendingCancel.toStatus && t.id !== task.id);
+          if (pendingCancel.toIndex !== undefined && pendingCancel.toIndex <= sameStatus.length) {
+            sameStatus.splice(pendingCancel.toIndex, 0, task);
+          } else {
+            sameStatus.push(task);
+          }
+          sameStatus.forEach((t, i) => t.order = i);
+        }
+        saveToStorage();
+        renderAll();
+      }
+      pendingCancel = null;
+    }
+    closeModal('modalCancel');
+  };
+});
+
+// ============================================================
+//  MOVABLE TRASH ICON
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  const trashWrap = document.getElementById('trashContainer');
+  if (!trashWrap) return;
+  let isDragging = false, startX, startY, origX, origY;
+
+  function getTrashTransform() {
+    const match = trashWrap.style.transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+    if (match) return { x: parseFloat(match[1]), y: parseFloat(match[2]) };
+    return { x: 0, y: 0 };
+  }
+
+  trashWrap.addEventListener('mousedown', (e) => {
+    const panel = document.getElementById('trashPanel');
+    if (panel && panel.style.display === 'block') {
+      if (e.target.closest('.trash-panel')) return;
+    }
+    if (e.target.closest('.trash-panel') || e.target.closest('.btn-trash-clear')) return;
+    isDragging = false;
+    startX = e.clientX;
+    startY = e.clientY;
+    const t = getTrashTransform();
+    origX = t.x;
+    origY = t.y;
+    trashWrap.style.cursor = 'grabbing';
+    trashWrap.classList.add('dragging');
+
+    const onMove = (ev) => {
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) isDragging = true;
+      if (isDragging) {
+        trashWrap.style.transform = `translate(${origX + dx}px, ${origY + dy}px)`;
+        trashWrap.style.transition = 'none';
+      }
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      trashWrap.style.cursor = '';
+      trashWrap.classList.remove('dragging');
+      trashWrap.style.transition = '';
+      if (!isDragging) {
+        toggleTrash();
+      }
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+});
+
+// ============================================================
+//  STATISTICS
+// ============================================================
+function renderStats() {
+  const startVal = document.getElementById('statsStart').value;
+  const endVal = document.getElementById('statsEnd').value;
+  if (!startVal || !endVal) return;
+  const start = new Date(startVal + 'T00:00:00+08:00');
+  const end = new Date(endVal + 'T23:59:59+08:00');
+  const counts = { pending: 0, processing: 0, completed: 0, cancelled: 0 };
+  tasks.forEach(t => {
+    const created = new Date(t.createdAt);
+    if (created >= start && created <= end) {
+      if (counts.hasOwnProperty(t.status)) counts[t.status]++;
+    }
+  });
+  const maxCount = Math.max(...Object.values(counts), 1);
+  ['pending', 'processing', 'completed', 'cancelled'].forEach(s => {
+    document.getElementById(`statsCount-${s}`).textContent = counts[s];
+    const pct = (counts[s] / maxCount) * 100;
+    document.getElementById(`statsBar-${s}`).style.height = pct + '%';
+  });
+}
+
+function exportStatsCSV() {
+  const startVal = document.getElementById('statsStart').value;
+  const endVal = document.getElementById('statsEnd').value;
+  const start = startVal ? new Date(startVal + 'T00:00:00+08:00') : new Date(0);
+  const end = endVal ? new Date(endVal + 'T23:59:59+08:00') : new Date();
+  const counts = { pending: 0, processing: 0, completed: 0, cancelled: 0 };
+  const details = [];
+  tasks.forEach(t => {
+    const created = new Date(t.createdAt);
+    if (created >= start && created <= end) {
+      if (counts.hasOwnProperty(t.status)) counts[t.status]++;
+      details.push({
+        id: t.id, title: t.title, status: STATUS_LABELS[t.status],
+        source: t.source, createdAt: formatTime(t.createdAt),
+        cancelReason: t.cancelReason || ''
+      });
+    }
+  });
+  let csv = '\uFEFF'; // BOM for Excel
+  csv += `统计时间段,${startVal || '全部'} ~ ${endVal || '全部'}\n\n`;
+  csv += `状态,数量\n`;
+  csv += `待处理,${counts.pending}\n`;
+  csv += `处理中,${counts.processing}\n`;
+  csv += `已完成,${counts.completed}\n`;
+  csv += `已取消,${counts.cancelled}\n`;
+  csv += `\n任务明细\n`;
+  csv += `任务编号,标题,状态,客户来源,创建时间,取消原因\n`;
+  details.forEach(d => {
+    csv += `"${d.id}","${d.title}","${d.status}","${d.source}","${d.createdAt}","${d.cancelReason}"\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `任务统计_${startVal || '全部'}_${endVal || '全部'}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ============================================================
+//  EVENT LISTENERS
+// ============================================================
+function setupEventListeners() {
+  // Login
+  document.getElementById('loginBtn').addEventListener('click', doLogin);
+  document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('loginUser').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPass').focus(); });
+  // Register / mode switch
+  const gotoRegister = document.getElementById('gotoRegister');
+  const gotoLogin = document.getElementById('gotoLogin');
+  if (gotoRegister) gotoRegister.addEventListener('click', showRegisterMode);
+  if (gotoLogin) gotoLogin.addEventListener('click', showLoginMode);
+  const registerBtn = document.getElementById('registerBtn');
+  if (registerBtn) registerBtn.addEventListener('click', doRegister);
+  const regPass = document.getElementById('regPass');
+  if (regPass) regPass.addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
+  // Logout
+  document.getElementById('logoutBtn').addEventListener('click', doLogout);
+  // New task
+  document.getElementById('btnNewTask').addEventListener('click', () => {
+    document.getElementById('newTaskTitle').value = '';
+    document.getElementById('newTaskDesc').value = '';
+    document.getElementById('newTaskSource').value = '';
+    openModal('modalNewTask');
+    setTimeout(() => document.getElementById('newTaskTitle').focus(), 100);
+  });
+  document.getElementById('confirmNewTask').addEventListener('click', () => {
+    const title = document.getElementById('newTaskTitle').value.trim();
+    if (!title) {
+      document.getElementById('newTaskTitle').style.borderColor = '#ff6b6b';
+      document.getElementById('newTaskTitle').placeholder = '请输入任务标题（必填）';
+      return;
+    }
+    const desc = document.getElementById('newTaskDesc').value.trim();
+    const source = document.getElementById('newTaskSource').value.trim();
+    createTask(title, desc, source);
+    closeModal('modalNewTask');
+  });
+  document.getElementById('newTaskTitle').addEventListener('input', () => {
+    document.getElementById('newTaskTitle').style.borderColor = '';
+  });
+  document.getElementById('newTaskTitle').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('newTaskDesc').focus();
+  });
+  // Cancel reason
+  document.getElementById('confirmCancel').addEventListener('click', doConfirmCancel);
+  document.getElementById('cancelReasonInput').addEventListener('input', () => {
+    document.getElementById('cancelReasonInput').style.borderColor = '';
+  });
+  // Statistics
+  document.getElementById('statsQuery').addEventListener('click', renderStats);
+  document.getElementById('statsExport').addEventListener('click', exportStatsCSV);
+  // Close modals on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', e => {
+      if (e.target === el) closeModal(el.id);
+    });
+  });
+  // Keyboard: Escape to close modal
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-overlay.show').forEach(el => closeModal(el.id));
+    }
+  });
+}
+
+// ============================================================
+//  START
+// ============================================================
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
