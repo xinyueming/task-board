@@ -5,3 +5,6 @@ gh_login.txt
 # 本地 git 凭据与临时 HOME（含 token，绝不提交）
 .git-credentials
 .githome/
+
+# archify 图表产物备份（不提交）
+_archify_outputs/

@@ -371,6 +371,8 @@ body {
   .btn-new-task-label { display: none; }
 }
 </style>
+<!-- Supabase 客户端库（UMD 全局版，暴露 window.supabase） -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body>
 
@@ -381,17 +383,36 @@ body {
       <div class="icon">📋</div>
       <h1>任务看板系统</h1>
     </div>
-    <div class="form-group">
-      <label>账号</label>
-      <input type="text" id="loginUser" placeholder="请输入账号" autocomplete="username">
+
+    <!-- 登录模式 -->
+    <div id="loginMode">
+      <div class="form-group">
+        <label>邮箱</label>
+        <input type="email" id="loginUser" placeholder="请输入邮箱" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" id="loginPass" placeholder="请输入密码" autocomplete="current-password">
+      </div>
+      <button class="btn-primary" id="loginBtn">登 录</button>
+      <div class="login-error" id="loginError">登录失败，请检查邮箱和密码</div>
+      <div class="login-hint">还没有账号？<a href="javascript:void(0)" id="gotoRegister" style="color:#667eea;">立即注册</a></div>
     </div>
-    <div class="form-group">
-      <label>密码</label>
-      <input type="password" id="loginPass" placeholder="请输入密码" autocomplete="current-password">
+
+    <!-- 注册模式 -->
+    <div id="registerMode" style="display:none;">
+      <div class="form-group">
+        <label>邮箱</label>
+        <input type="email" id="regUser" placeholder="请输入邮箱" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" id="regPass" placeholder="请输入密码（至少 6 位）" autocomplete="new-password">
+      </div>
+      <button class="btn-primary" id="registerBtn">注 册</button>
+      <div class="login-error" id="registerError">注册失败，请稍后再试</div>
+      <div class="login-hint">已有账号？<a href="javascript:void(0)" id="gotoLogin" style="color:#667eea;">返回登录</a></div>
     </div>
-    <button class="btn-primary" id="loginBtn">登 录</button>
-    <div class="login-error" id="loginError">账号或密码错误，请重试</div>
-    <div class="login-hint">演示账号：admin / 123456</div>
   </div>
 </div>
 
@@ -570,9 +591,12 @@ body {
 //  DATA
 // ============================================================
 const STORAGE_KEY = 'kanban_tasks';
-const AUTH_USER = 'admin';
-const AUTH_PASS = '123456';
 const STATUS_LABELS = { pending: '待处理', processing: '处理中', completed: '已完成', cancelled: '已取消' };
+
+// ---- Supabase 初始化 ----
+const SUPABASE_URL = 'https://xhiioyuxsbiodlzvodcy.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhoaWlveXV4c2Jpb2RsenZvZGN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3MDY0NzUsImV4cCI6MjEwNDI4MjQ3NX0.k2LGLWY6SvworB88jyc376UtUWiEln_MPHil05Z_gXU';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let tasks = [];
 let currentUser = null;
@@ -584,16 +608,16 @@ let nextSeq = 1;
 //  INIT
 // ============================================================
 function init() {
-  loadFromStorage();
   setDefaultDates();
   setupEventListeners();
-  // Check if already logged in
-  const saved = sessionStorage.getItem('kanban_user');
-  if (saved === AUTH_USER) {
-    currentUser = AUTH_USER;
-    enterApp();
-    renderAll();
-  }
+  // 检查 Supabase 是否已有会话（已登录则直接进入）
+  supabase.auth.getSession().then(({ data }) => {
+    if (data.session) {
+      currentUser = data.session.user;
+      enterApp();
+      loadCloudTasks();
+    }
+  });
 }
 
 function setDefaultDates() {
@@ -613,74 +637,200 @@ function toDateStr(d) {
 }
 
 // ============================================================
-//  LOCAL STORAGE
+//  CLOUD DATA LAYER (Supabase)
 // ============================================================
-function saveToStorage() {
-  const data = { tasks, nextSeq, deletedTasks };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
+// 把当前 tasks + deletedTasks 全量同步到云端（upsert）。
+// deletedTasks 用 deleted_at 标记写入同一张 tasks 表；活跃任务 deleted_at=null。
+async function syncTasksToCloud() {
+  if (!currentUser) return;
+  const rows = [];
+  tasks.forEach(t => rows.push({ ...toCloudRow(t), deleted_at: null }));
+  deletedTasks.forEach(t => rows.push({ ...toCloudRow(t), deleted_at: t.deletedAt || new Date().toISOString() }));
+  if (rows.length === 0) return;
+  const { error } = await supabase
+    .from('tasks')
+    .upsert(rows, { onConflict: 'id' });
+  if (error) console.error('Sync tasks failed:', error.message);
 }
 
-function loadFromStorage() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) {
-    try {
-      const data = JSON.parse(raw);
-      tasks = data.tasks || [];
-      nextSeq = data.nextSeq || 1;
-      deletedTasks = data.deletedTasks || [];
-      gcTrash();
-    } catch(e) { tasks = []; nextSeq = 1; deletedTasks = []; }
-  } else {
-    deletedTasks = [];
-    seedDemoData();
+// 把前端任务对象映射为数据库行字段
+function toCloudRow(t) {
+  return {
+    id: t.id,
+    user_id: currentUser.id,
+    title: t.title,
+    description: t.description || '',
+    source: t.source || '',
+    status: t.status,
+    order: t.order || 0,
+    cancel_reason: t.cancelReason || '',
+    created_at: t.createdAt || new Date().toISOString(),
+    updated_at: t.updatedAt || new Date().toISOString()
+  };
+}
+
+// 把数据库行映射回前端任务对象
+function fromCloudRow(r) {
+  return {
+    id: r.id,
+    title: r.title,
+    description: r.description || '',
+    source: r.source || '',
+    status: r.status,
+    order: r.order || 0,
+    cancelReason: r.cancel_reason || '',
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    deletedAt: r.deleted_at || null
+  };
+}
+
+// 保存入口：同步到云端（保留原函数名，所有 CRUD 均可继续调用）
+async function saveToStorage() {
+  await syncTasksToCloud();
+}
+
+// 从云端加载该用户任务（含回收站）。首次登录若云端为空而 localStorage 有旧数据，则迁移。
+async function loadCloudTasks() {
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .order('created_at', { ascending: true });
+  if (error) {
+    console.error('Load tasks failed:', error.message);
+    return;
   }
+  const active = (data || []).filter(r => !r.deleted_at);
+  const deleted = (data || []).filter(r => r.deleted_at);
+
+  // 若云端没有任何任务，尝试迁移 localStorage 旧数据
+  if (data.length === 0 && localStorage.getItem(STORAGE_KEY)) {
+    let migrated = false;
+    try {
+      const local = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      const localTasks = local.tasks || [];
+      if (localTasks.length > 0) {
+        // 逐条搬入云端
+        const rows = localTasks.map(t => {
+          migrated = true;
+          return { ...toCloudRow(t), deleted_at: null };
+        });
+        const localDeleted = (local.deletedTasks || []).map(t => {
+          migrated = true;
+          return { ...toCloudRow(t), deleted_at: t.deletedAt || new Date().toISOString() };
+        });
+        const allRows = rows.concat(localDeleted);
+        if (allRows.length) {
+          const { error: upErr } = await supabase.from('tasks').upsert(allRows, { onConflict: 'id' });
+          if (upErr) console.error('Migration upsert failed:', upErr.message);
+        }
+      }
+      if (migrated) localStorage.removeItem(STORAGE_KEY); // 迁移成功后清空本地
+    } catch (e) {
+      console.error('Local migration parse failed:', e.message);
+    }
+    // 迁移后重新拉一次
+    const reload = await supabase.from('tasks').select('*').order('created_at', { ascending: true });
+    const rd = reload.data || [];
+    tasks = rd.filter(r => !r.deleted_at).map(fromCloudRow);
+    deletedTasks = rd.filter(r => r.deleted_at).map(fromCloudRow);
+    gcTrash();
+  } else {
+    tasks = active.map(fromCloudRow);
+    deletedTasks = deleted.map(fromCloudRow);
+    gcTrash();
+    // 备份任务数，生成 id 序号用
+    nextSeq = tasks.length + 1;
+  }
+  renderAll();
 }
 
+// 兼容旧调用：初始化时直接加载（seed 仅在无人登录时的本地演示，这里不再用）
 function seedDemoData() {
-  const now = Date.now();
-  nextSeq = 1;
-  tasks = [
-    { id: genTaskId(), title: '首页UI改版设计', description: '重新设计首页布局和视觉风格，适配移动端', source: '荣耀商城', status: 'pending', order: 0, cancelReason: '', createdAt: new Date(now - 86400000*2).toISOString(), updatedAt: new Date(now - 86400000*2).toISOString() },
-    { id: genTaskId(), title: '用户反馈系统对接', description: '接入用户反馈API，实现实时消息推送', source: '内部需求', status: 'pending', order: 1, cancelReason: '', createdAt: new Date(now - 86400000).toISOString(), updatedAt: new Date(now - 86400000).toISOString() },
-    { id: genTaskId(), title: '支付模块性能优化', description: '优化支付接口响应时间，目标<200ms', source: '技术部', status: 'processing', order: 0, cancelReason: '', createdAt: new Date(now - 86400000*3).toISOString(), updatedAt: new Date(now - 86400000).toISOString() },
-    { id: genTaskId(), title: '数据看板开发', description: '实现运营数据可视化大屏', source: '运营部', status: 'processing', order: 1, cancelReason: '', createdAt: new Date(now - 86400000*4).toISOString(), updatedAt: new Date(now - 86400000*2).toISOString() },
-    { id: genTaskId(), title: '登录模块安全加固', description: '增加二次验证和登录频率限制', source: '安全审计', status: 'completed', order: 0, cancelReason: '', createdAt: new Date(now - 86400000*7).toISOString(), updatedAt: new Date(now - 86400000*3).toISOString() },
-    { id: genTaskId(), title: '旧版API文档归档', description: '整理v1版本API文档并归档', source: '内部需求', status: 'cancelled', order: 0, cancelReason: '需求变更，不再需要归档', createdAt: new Date(now - 86400000*5).toISOString(), updatedAt: new Date(now - 86400000*4).toISOString() },
-  ];
-  saveToStorage();
+  // Supabase 模式下不再提供演示假数据
+  tasks = [];
+  deletedTasks = [];
 }
 
 // ============================================================
 //  AUTH
 // ============================================================
-function doLogin() {
-  const user = document.getElementById('loginUser').value.trim();
+async function doLogin() {
+  const email = document.getElementById('loginUser').value.trim();
   const pass = document.getElementById('loginPass').value.trim();
-  if (user === AUTH_USER && pass === AUTH_PASS) {
-    currentUser = AUTH_USER;
-    sessionStorage.setItem('kanban_user', AUTH_USER);
-    document.getElementById('loginError').classList.remove('show');
-    enterApp();
-    renderAll();
-  } else {
+  if (!email || !pass) {
     document.getElementById('loginError').classList.add('show');
+    return;
+  }
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    document.getElementById('loginError').textContent = '登录失败：' + (error.message || '请检查邮箱和密码');
+    document.getElementById('loginError').classList.add('show');
+    return;
+  }
+  currentUser = data.user;
+  document.getElementById('loginError').classList.remove('show');
+  enterApp();
+  await loadCloudTasks();
+}
+
+async function doRegister() {
+  const email = document.getElementById('regUser').value.trim();
+  const pass = document.getElementById('regPass').value.trim();
+  if (!email || !pass) {
+    document.getElementById('registerError').classList.add('show');
+    return;
+  }
+  if (pass.length < 6) {
+    document.getElementById('registerError').textContent = '密码至少 6 位';
+    document.getElementById('registerError').classList.add('show');
+    return;
+  }
+  const { data, error } = await supabase.auth.signUp({ email, password: pass });
+  if (error) {
+    document.getElementById('registerError').textContent = '注册失败：' + (error.message || '请稍后再试');
+    document.getElementById('registerError').classList.add('show');
+    return;
+  }
+  // 若开启了邮箱验证，会话可能为空；否则直接进入
+  if (data.session) {
+    currentUser = data.user;
+    document.getElementById('registerError').classList.remove('show');
+    enterApp();
+    await loadCloudTasks();
+  } else {
+    document.getElementById('registerError').textContent = '注册成功！请到邮箱点击验证链接后登录。';
+    document.getElementById('registerError').classList.add('show');
   }
 }
 
-function doLogout() {
+async function doLogout() {
+  await supabase.auth.signOut();
   currentUser = null;
-  sessionStorage.removeItem('kanban_user');
   document.getElementById('mainApp').classList.remove('show');
   document.getElementById('loginPage').classList.remove('hidden');
   document.getElementById('loginUser').value = '';
   document.getElementById('loginPass').value = '';
   document.getElementById('loginError').classList.remove('show');
+  document.getElementById('registerError').classList.remove('show');
+  showLoginMode();
 }
 
 function enterApp() {
   document.getElementById('loginPage').classList.add('hidden');
   document.getElementById('mainApp').classList.add('show');
-  document.getElementById('headerUser').textContent = '👤 ' + currentUser;
+  const email = (currentUser && currentUser.email) ? currentUser.email : '用户';
+  document.getElementById('headerUser').textContent = '👤 ' + email;
+}
+
+function showLoginMode() {
+  document.getElementById('loginMode').style.display = 'block';
+  document.getElementById('registerMode').style.display = 'none';
+}
+function showRegisterMode() {
+  document.getElementById('loginMode').style.display = 'none';
+  document.getElementById('registerMode').style.display = 'block';
 }
 
 // ============================================================
@@ -693,7 +843,6 @@ function genTaskId() {
   const d = String(now.getDate()).padStart(2, '0');
   const seq = String(nextSeq).padStart(3, '0');
   nextSeq++;
-  saveToStorage();
   return `TASK-${y}${m}${d}-${seq}`;
 }
 
@@ -905,11 +1054,17 @@ function restoreTask(taskId) {
   renderAll();
 }
 
-function clearTrash() {
+async function clearTrash() {
   if (deletedTasks.length === 0) return;
   if (!confirm('确定要清空回收站吗？删除的记录将无法恢复。')) return;
+  // 物理删除云端已删除的记录
+  if (currentUser) {
+    const ids = deletedTasks.map(t => t.id);
+    const { error } = await supabase.from('tasks').delete().in('id', ids).not('deleted_at', 'is', null);
+    if (error) console.error('Clear trash delete failed:', error.message);
+  }
   deletedTasks = [];
-  saveToStorage();
+  await saveToStorage();
   renderTrash();
 }
 
@@ -1372,6 +1527,15 @@ function setupEventListeners() {
   document.getElementById('loginBtn').addEventListener('click', doLogin);
   document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
   document.getElementById('loginUser').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPass').focus(); });
+  // Register / mode switch
+  const gotoRegister = document.getElementById('gotoRegister');
+  const gotoLogin = document.getElementById('gotoLogin');
+  if (gotoRegister) gotoRegister.addEventListener('click', showRegisterMode);
+  if (gotoLogin) gotoLogin.addEventListener('click', showLoginMode);
+  const registerBtn = document.getElementById('registerBtn');
+  if (registerBtn) registerBtn.addEventListener('click', doRegister);
+  const regPass = document.getElementById('regPass');
+  if (regPass) regPass.addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
   // Logout
   document.getElementById('logoutBtn').addEventListener('click', doLogout);
   // New task
