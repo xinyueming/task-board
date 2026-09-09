@@ -650,7 +650,7 @@ async function syncTasksToCloud() {
   tasks.forEach(t => rows.push({ ...toCloudRow(t), deleted_at: null }));
   deletedTasks.forEach(t => rows.push({ ...toCloudRow(t), deleted_at: t.deletedAt || new Date().toISOString() }));
   if (rows.length === 0) return;
-  const { error } = await supabase
+  const { error } = await sb
     .from('tasks')
     .upsert(rows, { onConflict: 'id' });
   if (error) console.error('Sync tasks failed:', error.message);
@@ -695,7 +695,7 @@ async function saveToStorage() {
 
 // 从云端加载该用户任务（含回收站）。首次登录若云端为空而 localStorage 有旧数据，则迁移。
 async function loadCloudTasks() {
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('tasks')
     .select('*')
     .order('created_at', { ascending: true });
