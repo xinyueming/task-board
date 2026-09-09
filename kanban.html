@@ -596,7 +596,9 @@ const STATUS_LABELS = { pending: '待处理', processing: '处理中', completed
 // ---- Supabase 初始化 ----
 const SUPABASE_URL = 'https://xhiioyuxsbiodlzvodcy.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhoaWlveXV4c2Jpb2RsenZvZGN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3MDY0NzUsImV4cCI6MjEwNDI4MjQ3NX0.k2LGLWY6SvworB88jyc376UtUWiEln_MPHil05Z_gXU';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// 注意：UMD 版 supabase.js 已在全局声明 var supabase（客户端工厂），
+// 这里用 var sb 持有实际客户端实例，避免与全局 supabase 命名冲突。
+var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let tasks = [];
 let currentUser = null;
@@ -611,7 +613,7 @@ function init() {
   setDefaultDates();
   setupEventListeners();
   // 检查 Supabase 是否已有会话（已登录则直接进入）
-  supabase.auth.getSession().then(({ data }) => {
+  sb.auth.getSession().then(({ data }) => {
     if (data.session) {
       currentUser = data.session.user;
       enterApp();
@@ -722,7 +724,7 @@ async function loadCloudTasks() {
         });
         const allRows = rows.concat(localDeleted);
         if (allRows.length) {
-          const { error: upErr } = await supabase.from('tasks').upsert(allRows, { onConflict: 'id' });
+          const { error: upErr } = await sb.from('tasks').upsert(allRows, { onConflict: 'id' });
           if (upErr) console.error('Migration upsert failed:', upErr.message);
         }
       }
@@ -731,7 +733,7 @@ async function loadCloudTasks() {
       console.error('Local migration parse failed:', e.message);
     }
     // 迁移后重新拉一次
-    const reload = await supabase.from('tasks').select('*').order('created_at', { ascending: true });
+    const reload = await sb.from('tasks').select('*').order('created_at', { ascending: true });
     const rd = reload.data || [];
     tasks = rd.filter(r => !r.deleted_at).map(fromCloudRow);
     deletedTasks = rd.filter(r => r.deleted_at).map(fromCloudRow);
@@ -763,7 +765,7 @@ async function doLogin() {
     document.getElementById('loginError').classList.add('show');
     return;
   }
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
   if (error) {
     document.getElementById('loginError').textContent = '登录失败：' + (error.message || '请检查邮箱和密码');
     document.getElementById('loginError').classList.add('show');
@@ -787,7 +789,7 @@ async function doRegister() {
     document.getElementById('registerError').classList.add('show');
     return;
   }
-  const { data, error } = await supabase.auth.signUp({ email, password: pass });
+  const { data, error } = await sb.auth.signUp({ email, password: pass });
   if (error) {
     document.getElementById('registerError').textContent = '注册失败：' + (error.message || '请稍后再试');
     document.getElementById('registerError').classList.add('show');
@@ -806,7 +808,7 @@ async function doRegister() {
 }
 
 async function doLogout() {
-  await supabase.auth.signOut();
+  await sb.auth.signOut();
   currentUser = null;
   document.getElementById('mainApp').classList.remove('show');
   document.getElementById('loginPage').classList.remove('hidden');
@@ -1060,7 +1062,7 @@ async function clearTrash() {
   // 物理删除云端已删除的记录
   if (currentUser) {
     const ids = deletedTasks.map(t => t.id);
-    const { error } = await supabase.from('tasks').delete().in('id', ids).not('deleted_at', 'is', null);
+    const { error } = await sb.from('tasks').delete().in('id', ids).not('deleted_at', 'is', null);
     if (error) console.error('Clear trash delete failed:', error.message);
   }
   deletedTasks = [];
