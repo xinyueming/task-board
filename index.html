@@ -289,6 +289,20 @@ body {
 }
 .stats-export-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.3); }
 
+/* ===== Quick Range Buttons ===== */
+.quick-ranges { display: flex; align-items: center; gap: 6px; margin-right: 4px; }
+.quick-range-btn {
+  padding: 6px 12px; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px;
+  background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.6);
+  font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap;
+  transition: all 0.2s;
+}
+.quick-range-btn:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.25); }
+.quick-range-btn.active {
+  background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;
+  border-color: transparent; box-shadow: 0 4px 14px rgba(102,126,234,0.35);
+}
+
 .stats-body { display: flex; align-items: flex-end; gap: 24px; height: 80px; }
 .stat-bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .stat-bar-track { width: 100%; height: 48px; background: rgba(255,255,255,0.04); border-radius: 6px; position: relative; overflow: hidden; }
@@ -478,6 +492,13 @@ body {
     <div class="stats-header">
       <h3>📊 任务统计</h3>
       <div class="stats-controls">
+        <div class="quick-ranges">
+          <button class="quick-range-btn" data-range="week">近一周</button>
+          <button class="quick-range-btn" data-range="month">近一月</button>
+          <button class="quick-range-btn" data-range="quarter">近三月</button>
+          <button class="quick-range-btn" data-range="halfyear">近半年</button>
+          <button class="quick-range-btn" data-range="year">近一年</button>
+        </div>
         <label>从</label>
         <input type="date" id="statsStart">
         <label>到</label>
@@ -623,12 +644,43 @@ function init() {
 }
 
 function setDefaultDates() {
-  const now = new Date();
-  const y = now.getFullYear(), m = now.getMonth();
-  const first = new Date(y, m, 1);
-  const last = new Date(y, m + 1, 0);
-  document.getElementById('statsStart').value = toDateStr(first);
-  document.getElementById('statsEnd').value = toDateStr(last);
+  // 默认区间：最近一周（含今天共 7 天）
+  // silent=true：初始化时只填日期与激活态，等登录加载数据后由 renderAll() 统一渲染
+  setQuickRange('week', true);
+}
+
+// 快捷周期区间计算：以「今天」为终点往前推
+// 含今天的天数语义：近一周 = 今天往前推 6 天（共 7 天）
+function calcQuickRange(range) {
+  const end = new Date();
+  const start = new Date();
+  switch (range) {
+    case 'week':      start.setDate(end.getDate() - 6); break;      // 近一周：含今天共 7 天
+    case 'month':     start.setMonth(end.getMonth() - 1); break;    // 近一月
+    case 'quarter':   start.setMonth(end.getMonth() - 3); break;    // 近三月
+    case 'halfyear':  start.setMonth(end.getMonth() - 6); break;    // 近半年
+    case 'year':      start.setFullYear(end.getFullYear() - 1); break; // 近一年
+    default:          start.setDate(end.getDate() - 6);
+  }
+  return { start, end };
+}
+
+// 应用快捷周期：回填日期输入框 + 高亮激活按钮 + 立即刷新统计
+// silent=true 时只设置区间与激活态，不触发渲染（用于初始化）
+function setQuickRange(range, silent) {
+  const { start, end } = calcQuickRange(range);
+  document.getElementById('statsStart').value = toDateStr(start);
+  document.getElementById('statsEnd').value = toDateStr(end);
+  // 更新按钮激活态
+  document.querySelectorAll('.quick-range-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.range === range);
+  });
+  if (!silent) renderStats();
+}
+
+// 用户手动改日期后，清除快捷按钮的激活态（表示自定义区间）
+function clearQuickRangeActive() {
+  document.querySelectorAll('.quick-range-btn').forEach(btn => btn.classList.remove('active'));
 }
 
 function toDateStr(d) {
@@ -1482,6 +1534,13 @@ function renderStats() {
   });
 }
 
+// CSV 单元格转义：把内部双引号转义为两个双引号，并整体用双引号包裹。
+// 这样描述里的逗号、双引号、换行都能被 Excel 正确解析（换行按标准 CSV 保留）。
+function csvCell(v) {
+  const s = (v == null ? '' : String(v));
+  return '"' + s.replace(/"/g, '""') + '"';
+}
+
 function exportStatsCSV() {
   const startVal = document.getElementById('statsStart').value;
   const endVal = document.getElementById('statsEnd').value;
@@ -1494,23 +1553,24 @@ function exportStatsCSV() {
     if (created >= start && created <= end) {
       if (counts.hasOwnProperty(t.status)) counts[t.status]++;
       details.push({
-        id: t.id, title: t.title, status: STATUS_LABELS[t.status],
+        id: t.id, title: t.title, description: t.description || '',
+        status: STATUS_LABELS[t.status],
         source: t.source, createdAt: formatTime(t.createdAt),
         cancelReason: t.cancelReason || ''
       });
     }
   });
   let csv = '\uFEFF'; // BOM for Excel
-  csv += `统计时间段,${startVal || '全部'} ~ ${endVal || '全部'}\n\n`;
-  csv += `状态,数量\n`;
-  csv += `待处理,${counts.pending}\n`;
-  csv += `处理中,${counts.processing}\n`;
-  csv += `已完成,${counts.completed}\n`;
-  csv += `已取消,${counts.cancelled}\n`;
-  csv += `\n任务明细\n`;
-  csv += `任务编号,标题,状态,客户来源,创建时间,取消原因\n`;
+  csv += csvCell('统计时间段') + ',' + csvCell((startVal || '全部') + ' ~ ' + (endVal || '全部')) + '\n\n';
+  csv += csvCell('状态') + ',' + csvCell('数量') + '\n';
+  csv += csvCell('待处理') + ',' + csvCell(counts.pending) + '\n';
+  csv += csvCell('处理中') + ',' + csvCell(counts.processing) + '\n';
+  csv += csvCell('已完成') + ',' + csvCell(counts.completed) + '\n';
+  csv += csvCell('已取消') + ',' + csvCell(counts.cancelled) + '\n';
+  csv += '\n' + csvCell('任务明细') + '\n';
+  csv += ['任务编号', '标题', '任务描述', '状态', '客户来源', '创建时间', '取消原因'].map(csvCell).join(',') + '\n';
   details.forEach(d => {
-    csv += `"${d.id}","${d.title}","${d.status}","${d.source}","${d.createdAt}","${d.cancelReason}"\n`;
+    csv += [d.id, d.title, d.description, d.status, d.source, d.createdAt, d.cancelReason].map(csvCell).join(',') + '\n';
   });
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -1574,6 +1634,15 @@ function setupEventListeners() {
   // Statistics
   document.getElementById('statsQuery').addEventListener('click', renderStats);
   document.getElementById('statsExport').addEventListener('click', exportStatsCSV);
+  // 快捷周期按钮：点击后立即刷新统计
+  document.querySelectorAll('.quick-range-btn').forEach(btn => {
+    btn.addEventListener('click', () => setQuickRange(btn.dataset.range));
+  });
+  // 手动修改日期时，取消快捷按钮的激活态（表示自定义区间）
+  ['statsStart', 'statsEnd'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', clearQuickRangeActive);
+  });
   // Close modals on overlay click
   document.querySelectorAll('.modal-overlay').forEach(el => {
     el.addEventListener('click', e => {

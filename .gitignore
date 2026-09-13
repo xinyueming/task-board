@@ -1,4 +1,4 @@
-# GitHub CLI 凭据与登录临时文件 —— 绝不提交
+﻿# GitHub CLI 凭据与登录临时文件 —— 绝不提交
 .gh-cli/
 gh_login.txt
 
@@ -8,3 +8,6 @@ gh_login.txt
 
 # archify 图表产物备份（不提交）
 _archify_outputs/
+
+# 本地预览目录（不提交）
+_preview/
