@@ -658,7 +658,7 @@ body {
         <button class="btn-ai-test" id="aiTestBtn">测试连接</button>
       </div>
       <div class="ai-field-hint">
-        API Key 仅保存在你当前浏览器中（按账号隔离），不会上传到服务器。<br>
+        保存在你的账号中（Supabase），换设备登录后自动同步。<br>
         申请地址：platform.deepseek.com/api_keys
       </div>
     </div>
@@ -950,7 +950,7 @@ function enterApp() {
   document.getElementById('mainApp').classList.add('show');
   const email = (currentUser && currentUser.email) ? currentUser.email : '用户';
   document.getElementById('headerUser').textContent = '👤 ' + email;
-  refreshAiSettingsBtn();
+  loadAiSettings();   // 从账号加载 AI 配置（含本地缓存 + 云端同步）
 }
 
 function showLoginMode() {
@@ -1663,29 +1663,68 @@ function exportStatsCSV() {
 const DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/chat/completions';
 const REPORT_PAYLOAD_KEY = 'report_payload';   // 通过同源 localStorage 传给 report.html
 
-// ---- API Key / 模型存储（按登录账号隔离，仅存浏览器本地） ----
+// ---- API Key / 模型存储 ----
+// 权威数据存在 Supabase 的 user_settings 表（账号级，RLS 隔离，换设备自动同步）；
+// 同时在 localStorage 留一份缓存，用于页面加载瞬间即可用、以及离线兜底。
+let aiConfig = { key: '', model: 'deepseek-flash' };
+
 function aiKeyStorageName() {
   const uid = (currentUser && currentUser.id) ? currentUser.id : 'anonymous';
   return 'ds_key_' + uid;
-}
-function getAiKey() {
-  try { return localStorage.getItem(aiKeyStorageName()) || ''; } catch (e) { return ''; }
-}
-function setAiKey(v) {
-  try {
-    if (v) localStorage.setItem(aiKeyStorageName(), v);
-    else localStorage.removeItem(aiKeyStorageName());
-  } catch (e) { console.error('保存 API Key 失败:', e.message); }
 }
 function aiModelStorageName() {
   const uid = (currentUser && currentUser.id) ? currentUser.id : 'anonymous';
   return 'ds_model_' + uid;
 }
-function getAiModel() {
-  try { return localStorage.getItem(aiModelStorageName()) || 'deepseek-flash'; } catch (e) { return 'deepseek-flash'; }
+
+function getAiKey() { return aiConfig.key || ''; }
+function getAiModel() { return aiConfig.model || 'deepseek-flash'; }
+
+// 写入本地缓存（不含云端）
+function cacheAiSettingsLocal(key, model) {
+  try {
+    if (key) localStorage.setItem(aiKeyStorageName(), key);
+    else localStorage.removeItem(aiKeyStorageName());
+    localStorage.setItem(aiModelStorageName(), model || 'deepseek-flash');
+  } catch (e) { console.error('写入本地缓存失败:', e.message); }
 }
-function setAiModel(v) {
-  try { localStorage.setItem(aiModelStorageName(), v || 'deepseek-flash'); } catch (e) {}
+
+// 登录后加载：先用本地缓存即时生效，再从 Supabase 拉取云端（以云端为准）
+async function loadAiSettings() {
+  aiConfig.key = '';
+  aiConfig.model = 'deepseek-flash';
+  try {
+    aiConfig.key = localStorage.getItem(aiKeyStorageName()) || '';
+    aiConfig.model = localStorage.getItem(aiModelStorageName()) || 'deepseek-flash';
+  } catch (e) {}
+  refreshAiSettingsBtn();
+
+  if (!currentUser) return;
+  const { data, error } = await sb
+    .from('user_settings')
+    .select('deepseek_key, model')
+    .eq('user_id', currentUser.id)
+    .maybeSingle();
+  if (error) {
+    console.error('读取云端 AI 设置失败:', error.message);
+    return;
+  }
+  if (data) {
+    aiConfig.key = data.deepseek_key || '';
+    aiConfig.model = data.model || 'deepseek-flash';
+    cacheAiSettingsLocal(aiConfig.key, aiConfig.model);
+  } else {
+    // 云端还没有记录：若本地已有配置，则顺带上传一次（便于老用户迁移）
+    if (aiConfig.key) {
+      await sb.from('user_settings').upsert({
+        user_id: currentUser.id,
+        deepseek_key: aiConfig.key,
+        model: aiConfig.model,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+    }
+  }
+  refreshAiSettingsBtn();
 }
 
 // 更新顶部「AI 设置」按钮状态（已配置则高亮）
@@ -1744,20 +1783,61 @@ async function testAiConnection() {
   }
 }
 
-function saveAiSettings() {
+// 保存：写入内存 + 本地缓存 + 云端（账号级）
+async function saveAiSettings() {
   const key = document.getElementById('aiApiKey').value.trim();
   const model = document.getElementById('aiModel').value;
-  setAiKey(key);
-  setAiModel(model);
+  const btn = document.getElementById('aiSaveBtn');
+  btn.disabled = true;
+  showAiStatus('正在保存到云端…', 'info');
+
+  aiConfig.key = key;
+  aiConfig.model = model;
+  cacheAiSettingsLocal(key, model);
   refreshAiSettingsBtn();
-  closeModal('modalAiSettings');
+
+  try {
+    const { error } = await sb.from('user_settings').upsert({
+      user_id: currentUser.id,
+      deepseek_key: key,
+      model: model,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
+    if (error) {
+      showAiStatus('已保存到本机，但云端保存失败：' + error.message + '（换设备可能不同步）', 'err');
+      btn.disabled = false;
+      return;
+    }
+    showAiStatus('✅ 已保存到账号，换设备登录后可自动同步', 'ok');
+    setTimeout(() => closeModal('modalAiSettings'), 700);
+  } catch (e) {
+    showAiStatus('已保存到本机，但云端保存异常：' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
-function clearAiKey() {
-  setAiKey('');
+// 清除：内存 + 本地缓存 + 云端
+async function clearAiKey() {
+  const btn = document.getElementById('aiClearBtn');
+  btn.disabled = true;
+  aiConfig.key = '';
+  cacheAiSettingsLocal('', getAiModel());
   document.getElementById('aiApiKey').value = '';
   refreshAiSettingsBtn();
-  showAiStatus('已清除本机保存的 API Key', 'info');
+  try {
+    await sb.from('user_settings').upsert({
+      user_id: currentUser.id,
+      deepseek_key: '',
+      model: getAiModel(),
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
+    showAiStatus('已清除账号中保存的 API Key', 'info');
+  } catch (e) {
+    showAiStatus('本机已清除，但云端清除失败：' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ---- 收集当前统计区间的任务数据 ----
