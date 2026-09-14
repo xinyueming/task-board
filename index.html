@@ -403,93 +403,7 @@ body {
 .btn-ai-report:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(124,58,237,0.4); }
 .btn-ai-report:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-/* AI 汇报全屏页 */
-#reportPage {
-  position: fixed; inset: 0; z-index: 3000; display: none;
-  flex-direction: column; background: #12122a;
-}
-#reportPage.show { display: flex; }
-.report-topbar {
-  flex: none; display: flex; align-items: center; gap: 16px;
-  padding: 14px 28px; background: rgba(255,255,255,0.04);
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-}
-.report-back {
-  padding: 7px 16px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
-  background: transparent; color: rgba(255,255,255,0.75); font-size: 13px; cursor: pointer;
-  transition: all 0.2s;
-}
-.report-back:hover { background: rgba(255,255,255,0.08); }
-.report-title { font-size: 16px; font-weight: 600; color: #e8e8e8; }
-.report-range { font-size: 13px; color: rgba(255,255,255,0.45); margin-left: auto; }
-.report-regen {
-  padding: 7px 16px; border: 1px solid rgba(102,126,234,0.5); border-radius: 8px;
-  background: rgba(102,126,234,0.12); color: #9aa8f0; font-size: 13px; cursor: pointer;
-}
-.report-regen:hover { background: rgba(102,126,234,0.25); }
-.report-regen:disabled { opacity: 0.45; cursor: not-allowed; }
-
-.report-body {
-  flex: 1; overflow-y: auto; padding: 32px 28px 40px;
-  display: flex; justify-content: center;
-}
-.report-doc {
-  width: 100%; max-width: 900px;
-  background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 14px; padding: 40px 44px; color: #e0e0e0;
-}
-.report-doc h1 {
-  font-size: 24px; font-weight: 700; margin-bottom: 26px; padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-}
-.report-section { margin-bottom: 26px; }
-.report-section h2 {
-  font-size: 16px; font-weight: 600; color: #a9b6ff; margin-bottom: 12px;
-  display: flex; align-items: center; gap: 8px;
-}
-.report-section h2::before {
-  content: ''; width: 4px; height: 16px; border-radius: 2px;
-  background: linear-gradient(180deg, #667eea, #764ba2);
-}
-.report-section p { font-size: 14px; line-height: 1.85; color: #cfcfd8; text-align: justify; }
-.report-section ul { list-style: none; padding: 0; }
-.report-section li {
-  font-size: 14px; line-height: 1.85; color: #cfcfd8; padding-left: 20px;
-  position: relative; margin-bottom: 8px; text-align: justify;
-}
-.report-section li::before {
-  content: '•'; position: absolute; left: 4px; color: #7c8cf0; font-weight: 700;
-}
-.report-placeholder { color: rgba(255,255,255,0.3); font-size: 14px; text-align: center; padding: 60px 0; }
-
-/* 生成中状态 */
-.report-loading { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.5); font-size: 13px; margin-bottom: 18px; }
-.report-spinner {
-  width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.15);
-  border-top-color: #7c8cf0; border-radius: 50%; animation: spin 0.8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-.report-cursor::after {
-  content: '▍'; color: #7c8cf0; animation: blink 1s step-end infinite;
-}
-@keyframes blink { 50% { opacity: 0; } }
-
-/* 底部导出行 */
-.report-actions {
-  flex: none; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  padding: 16px 28px; background: rgba(255,255,255,0.04);
-  border-top: 1px solid rgba(255,255,255,0.08);
-}
-.report-actions .label { font-size: 13px; color: rgba(255,255,255,0.45); margin-right: 4px; }
-.report-export-btn {
-  padding: 9px 20px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
-  background: rgba(255,255,255,0.05); color: #e0e0e0; font-size: 13px; font-weight: 500;
-  cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
-}
-.report-export-btn:hover:not(:disabled) { background: rgba(102,126,234,0.2); border-color: rgba(102,126,234,0.5); }
-.report-export-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+/* AI 汇报页样式已在独立页面 report.html 中定义 */
 
 /* AI 设置弹窗 */
 .ai-field-hint { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 6px; line-height: 1.6; }
@@ -507,36 +421,10 @@ body {
 }
 .btn-ai-test:hover { background: rgba(255,255,255,0.1); }
 .btn-ai-test:disabled { opacity: 0.5; cursor: not-allowed; }
-
-/* 打印样式（高清打印版 PDF） */
-@media print {
-  body { background: #fff !important; }
-  #loginPage, #mainApp, .trash-container, .modal-overlay,
-  .report-topbar, .report-actions { display: none !important; }
-  #reportPage { position: static !important; display: block !important; background: #fff !important; }
-  .report-body { display: block !important; overflow: visible !important; padding: 0 !important; }
-  .report-doc {
-    max-width: none !important; background: #fff !important; border: none !important;
-    border-radius: 0 !important; padding: 0 !important; color: #000 !important;
-  }
-  .report-doc h1 {
-    -webkit-text-fill-color: #1a1a3e !important; color: #1a1a3e !important;
-    background: none !important; border-bottom: 2px solid #333 !important;
-  }
-  .report-section h2 { color: #333 !important; }
-  .report-section h2::before { background: #333 !important; }
-  .report-section p, .report-section li { color: #000 !important; }
-  .report-section li::before { color: #333 !important; }
-  .report-loading { display: none !important; }
-}
 </style>
 <!-- Supabase 客户端库（UMD 全局版，暴露 window.supabase） -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<!-- 文档导出库：Word(docx) / PPT(PptxGenJS) / PDF(jsPDF) / 截图(html2canvas) -->
-<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<!-- 文档导出库仅在独立页面 report.html 中引入 -->
 </head>
 <body>
 
@@ -790,27 +678,7 @@ body {
   </div>
 </div>
 
-<!-- ===== AI 汇报全屏页 ===== -->
-<div id="reportPage">
-  <div class="report-topbar">
-    <button class="report-back" id="reportBackBtn">← 返回看板</button>
-    <span class="report-title">📄 AI 工作汇报</span>
-    <span class="report-range" id="reportRange"></span>
-    <button class="report-regen" id="reportRegenBtn">重新生成</button>
-  </div>
-  <div class="report-body">
-    <div class="report-doc" id="reportDoc">
-      <div class="report-placeholder" id="reportPlaceholder">正在准备汇报内容…</div>
-    </div>
-  </div>
-  <div class="report-actions">
-    <span class="label">导出：</span>
-    <button class="report-export-btn" id="exportWordBtn" disabled>📘 Word</button>
-    <button class="report-export-btn" id="exportPdfBtn" disabled>📕 PDF</button>
-    <button class="report-export-btn" id="exportPrintBtn" disabled>🖨 高清打印版</button>
-    <button class="report-export-btn" id="exportPptBtn" disabled>📙 PPT</button>
-  </div>
-</div>
+<!-- AI 汇报改为独立页面 report.html，在新标签页打开 -->
 
 <script>
 // ============================================================
@@ -1067,8 +935,7 @@ async function doRegister() {
 async function doLogout() {
   await sb.auth.signOut();
   currentUser = null;
-  document.getElementById('reportPage').classList.remove('show');
-  reportData = null;
+  try { localStorage.removeItem(REPORT_PAYLOAD_KEY); } catch (e) {}
   document.getElementById('mainApp').classList.remove('show');
   document.getElementById('loginPage').classList.remove('hidden');
   document.getElementById('loginUser').value = '';
@@ -1790,27 +1657,13 @@ function exportStatsCSV() {
 }
 
 // ============================================================
-//  AI 工作汇报（DeepSeek）
+//  AI 工作汇报（配置与入口）
+//  汇报展示页为独立页面 report.html，在新标签页打开
 // ============================================================
 const DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/chat/completions';
+const REPORT_PAYLOAD_KEY = 'report_payload';   // 通过同源 localStorage 传给 report.html
 
-// 默认工作汇报提示词
-const REPORT_SYSTEM_PROMPT = [
-  '你是一名专业的职场助理，擅长把零散的任务数据整理成结构清晰、重点突出、可直接向上级汇报的中文工作汇报。',
-  '',
-  '要求：',
-  '1. 语言正式、简洁，用第三人称陈述，避免口语化表达',
-  '2. 突出成果与进展，尽量量化（完成数量、完成率、关键指标）',
-  '3. 客观说明问题与风险，对已取消任务归纳原因',
-  '4. 给出切实可行的下阶段计划建议',
-  '5. 严格只输出以下 JSON 结构，不要输出任何多余文字或代码块标记：',
-  '{"标题":"","概述":"","完成情况":[""],"重点进展":[""],"问题与风险":[""],"下阶段计划":[""]}'
-].join('\n');
-
-let reportData = null;   // 最近一次生成的汇报内容（供导出使用）
-let aiGenerating = false;
-
-// ---- API Key 存储（按登录账号隔离，仅存浏览器本地） ----
+// ---- API Key / 模型存储（按登录账号隔离，仅存浏览器本地） ----
 function aiKeyStorageName() {
   const uid = (currentUser && currentUser.id) ? currentUser.id : 'anonymous';
   return 'ds_key_' + uid;
@@ -1925,39 +1778,10 @@ function collectReportData() {
   return { startVal, endVal, counts, list };
 }
 
-// 把任务数据拼成提交给大模型的文本
-function buildReportUserPrompt(d) {
-  const lines = [];
-  lines.push('统计区间：' + (d.startVal || '全部') + ' ~ ' + (d.endVal || '全部'));
-  lines.push('状态汇总：待处理' + d.counts.pending + '，处理中' + d.counts.processing
-    + '，已完成' + d.counts.completed + '，已取消' + d.counts.cancelled
-    + '（共' + d.list.length + '项）');
-  lines.push('');
-  lines.push('任务明细：');
-  d.list.forEach(t => {
-    let s = '- ' + t.id + ' ' + t.title + ' [' + (STATUS_LABELS[t.status] || t.status) + ']';
-    s += ' 来源:' + (t.source || '未指定');
-    if (t.description) s += ' 描述:' + t.description;
-    if (t.status === 'cancelled' && t.cancelReason) s += ' 取消原因:' + t.cancelReason;
-    lines.push(s);
-  });
-  return lines.join('\n');
-}
-
-// ---- 打开汇报页并生成 ----
-function openReportPage() {
-  document.getElementById('reportPage').classList.add('show');
-}
-
-function closeReportPage() {
-  document.getElementById('reportPage').classList.remove('show');
-}
-
-async function generateReport() {
-  if (aiGenerating) return;
-  const key = getAiKey();
-  if (!key) {
-    alert('请先在右上角「⚙️ AI 设置」中配置 DeepSeek API Key');
+// ---- 点击「AI 整理汇报」：写入数据并在新标签页打开 report.html ----
+function onAiReportClick() {
+  if (!getAiKey()) {
+    alert('请先配置 DeepSeek API Key（右上角「⚙️ AI 设置」）');
     openAiSettings();
     return;
   }
@@ -1966,299 +1790,24 @@ async function generateReport() {
     alert('当前统计区间内没有任务，无法生成汇报。请调整查询周期。');
     return;
   }
-
-  aiGenerating = true;
-  reportData = null;
-  setExportButtonsEnabled(false);
-  document.getElementById('reportRange').textContent =
-    '统计区间：' + (data.startVal || '全部') + ' ~ ' + (data.endVal || '全部')
-    + '　共 ' + data.list.length + ' 项任务';
-  document.getElementById('reportRegenBtn').disabled = true;
-
-  const doc = document.getElementById('reportDoc');
-  doc.innerHTML = '<div class="report-loading"><div class="report-spinner"></div><span>AI 正在分析任务数据并生成汇报…</span></div>';
-
-  let buffer = '';
-  const renderLive = () => {
-    // 流式阶段先做纯文本预览（JSON 未完整时无法解析结构）
-    doc.innerHTML = '<div class="report-loading"><div class="report-spinner"></div><span>AI 正在生成中…（已接收 ' + buffer.length + ' 字）</span></div>';
-  };
-
-  try {
-    const res = await fetch(DEEPSEEK_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-      body: JSON.stringify({
-        model: getAiModel(),
-        messages: [
-          { role: 'system', content: REPORT_SYSTEM_PROMPT },
-          { role: 'user', content: buildReportUserPrompt(data) }
-        ],
-        stream: true,
-        thinking: { type: 'disabled' },
-        response_format: { type: 'json_object' },
-        max_tokens: 4096
-      })
-    });
-
-    if (!res.ok) {
-      const t = await res.text();
-      throw new Error('接口返回 ' + res.status + '：' + t.slice(0, 200));
-    }
-
-    // 解析 SSE 流
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder('utf-8');
-    let sseBuf = '';
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      sseBuf += decoder.decode(value, { stream: true });
-      const parts = sseBuf.split('\n');
-      sseBuf = parts.pop();
-      for (const line of parts) {
-        const l = line.trim();
-        if (!l.startsWith('data:')) continue;
-        const payload = l.slice(5).trim();
-        if (payload === '[DONE]') continue;
-        try {
-          const obj = JSON.parse(payload);
-          const delta = obj.choices && obj.choices[0] && obj.choices[0].delta;
-          if (delta && delta.content) { buffer += delta.content; renderLive(); }
-        } catch (e) { /* 忽略不完整分片 */ }
-      }
-    }
-
-    // 解析最终 JSON
-    let parsed = null;
-    try {
-      parsed = JSON.parse(buffer);
-    } catch (e) {
-      // 兜底：截取第一个 { 到最后一个 }
-      const a = buffer.indexOf('{'), b = buffer.lastIndexOf('}');
-      if (a !== -1 && b > a) {
-        try { parsed = JSON.parse(buffer.slice(a, b + 1)); } catch (e2) { parsed = null; }
-      }
-    }
-
-    if (parsed && typeof parsed === 'object') {
-      reportData = normalizeReport(parsed, data);
-      renderReport(reportData);
-      setExportButtonsEnabled(true);
-    } else {
-      // 降级：按纯文本展示
-      reportData = null;
-      doc.innerHTML = '<h1>AI 工作汇报</h1><div class="report-section"><p>'
-        + escHtml(buffer).replace(/\n/g, '<br>') + '</p></div>';
-      setExportButtonsEnabled(false);
-    }
-  } catch (e) {
-    doc.innerHTML = '<div class="report-section"><h2>生成失败</h2><p style="color:#ff8080">'
-      + escHtml(e.message || String(e)) + '</p><p style="font-size:13px;color:rgba(255,255,255,0.4)">'
-      + '请检查：API Key 是否有效、账户余额是否充足、网络是否可访问 api.deepseek.com。</p></div>';
-  } finally {
-    aiGenerating = false;
-    document.getElementById('reportRegenBtn').disabled = false;
-  }
-}
-
-// 规范化模型输出，避免字段缺失/类型不符导致渲染或导出出错
-function normalizeReport(raw, data) {
-  const arr = v => {
-    if (Array.isArray(v)) return v.map(x => String(x)).filter(x => x.trim());
-    if (typeof v === 'string' && v.trim()) return [v];
-    return [];
-  };
-  const str = v => (v == null ? '' : String(v));
-  return {
-    title: str(raw['标题'] || raw.title) || '工作汇报',
-    summary: str(raw['概述'] || raw.summary),
-    done: arr(raw['完成情况'] || raw.done),
-    progress: arr(raw['重点进展'] || raw.progress),
-    risks: arr(raw['问题与风险'] || raw.risks),
-    plan: arr(raw['下阶段计划'] || raw.plan),
-    range: (data.startVal || '全部') + ' ~ ' + (data.endVal || '全部'),
+  const payload = {
+    uid: (currentUser && currentUser.id) ? currentUser.id : 'anonymous',
+    startVal: data.startVal,
+    endVal: data.endVal,
     counts: data.counts,
-    total: data.list.length
+    list: data.list,
+    ts: Date.now()
   };
-}
-
-// 渲染汇报到页面
-function renderReport(r) {
-  const sec = (title, items) => {
-    if (!items || items.length === 0) return '';
-    return '<div class="report-section"><h2>' + escHtml(title) + '</h2><ul>'
-      + items.map(i => '<li>' + escHtml(i) + '</li>').join('') + '</ul></div>';
-  };
-  let html = '<h1>' + escHtml(r.title) + '</h1>';
-  if (r.summary) {
-    html += '<div class="report-section"><h2>概述</h2><p>' + escHtml(r.summary) + '</p></div>';
-  }
-  html += sec('完成情况', r.done);
-  html += sec('重点进展', r.progress);
-  html += sec('问题与风险', r.risks);
-  html += sec('下阶段计划', r.plan);
-  document.getElementById('reportDoc').innerHTML = html;
-}
-
-function setExportButtonsEnabled(on) {
-  ['exportWordBtn', 'exportPdfBtn', 'exportPrintBtn', 'exportPptBtn'].forEach(id => {
-    const b = document.getElementById(id);
-    if (b) b.disabled = !on;
-  });
-}
-
-// ---- 导出：Word (.docx) ----
-async function exportReportWord() {
-  if (!reportData) return;
-  const d = reportData;
-  const { Document, Packer, Paragraph, TextRun, HeadingLevel } = window.docx;
-  const children = [];
-  children.push(new Paragraph({ text: d.title, heading: HeadingLevel.TITLE }));
-  const meta = '统计区间：' + d.range + '　|　任务总数：' + d.total;
-  children.push(new Paragraph({ children: [new TextRun({ text: meta, italics: true, color: '666666' })] }));
-  children.push(new Paragraph({ text: '' }));
-
-  if (d.summary) {
-    children.push(new Paragraph({ text: '一、概述', heading: HeadingLevel.HEADING_1 }));
-    children.push(new Paragraph({ text: d.summary }));
-    children.push(new Paragraph({ text: '' }));
-  }
-  const blocks = [
-    ['二、完成情况', d.done],
-    ['三、重点进展', d.progress],
-    ['四、问题与风险', d.risks],
-    ['五、下阶段计划', d.plan]
-  ];
-  blocks.forEach(([title, items]) => {
-    if (!items || !items.length) return;
-    children.push(new Paragraph({ text: title, heading: HeadingLevel.HEADING_1 }));
-    items.forEach(it => {
-      children.push(new Paragraph({ text: it, bullet: { level: 0 } }));
-    });
-    children.push(new Paragraph({ text: '' }));
-  });
-
-  const doc = new Document({ sections: [{ children }] });
-  const blob = await Packer.toBlob(doc);
-  downloadBlob(blob, '工作汇报_' + fileStamp() + '.docx');
-}
-
-// ---- 导出：PPT (.pptx) ----
-async function exportReportPpt() {
-  if (!reportData) return;
-  const d = reportData;
-  const pptx = new window.PptxGenJS();
-  pptx.layout = 'LAYOUT_16x9';
-
-  // 封面页
-  const cover = pptx.addSlide();
-  cover.background = { color: '1A1A3E' };
-  cover.addText(d.title, { x: 0.6, y: 2.0, w: 8.8, h: 1.0, fontSize: 32, bold: true, color: 'FFFFFF', align: 'center' });
-  cover.addText('统计区间：' + d.range + '　|　任务总数：' + d.total,
-    { x: 0.6, y: 3.1, w: 8.8, h: 0.5, fontSize: 14, color: 'AAAACC', align: 'center' });
-
-  const addSection = (title, items, isText) => {
-    if (!items || (Array.isArray(items) && items.length === 0) || (!isText && !items)) return;
-    const s = pptx.addSlide();
-    s.addText(title, { x: 0.5, y: 0.35, w: 9, h: 0.6, fontSize: 22, bold: true, color: '333366' });
-    if (isText) {
-      s.addText(items, { x: 0.5, y: 1.1, w: 9, h: 4.2, fontSize: 14, color: '333333', lineSpacingMultiple: 1.4 });
-    } else {
-      s.addText(items.map(t => ({ text: t, options: { bullet: true, breakLine: true } })),
-        { x: 0.5, y: 1.1, w: 9, h: 4.2, fontSize: 14, color: '333333', lineSpacingMultiple: 1.4 });
-    }
-  };
-  if (d.summary) addSection('概述', d.summary, true);
-  addSection('完成情况', d.done, false);
-  addSection('重点进展', d.progress, false);
-  addSection('问题与风险', d.risks, false);
-  addSection('下阶段计划', d.plan, false);
-
-  await pptx.writeFile({ fileName: '工作汇报_' + fileStamp() + '.pptx' });
-}
-
-// ---- 导出：PDF（截图方式，中文正常） ----
-async function exportReportPdf() {
-  if (!reportData) return;
-  const el = document.getElementById('reportDoc');
-  const btn = document.getElementById('exportPdfBtn');
-  const old = btn.textContent;
-  btn.disabled = true; btn.textContent = '⏳ 生成中…';
   try {
-    const canvas = await window.html2canvas(el, {
-      backgroundColor: '#ffffff', scale: 2, useCORS: true,
-      onclone: (clonedDoc) => {
-        const c = clonedDoc.getElementById('reportDoc');
-        if (!c) return;
-        c.style.background = '#ffffff';
-        c.style.border = 'none';
-        c.style.color = '#000000';
-        c.querySelectorAll('h1').forEach(h => {
-          h.style.webkitTextFillColor = '#1a1a3e';
-          h.style.color = '#1a1a3e';
-          h.style.background = 'none';
-        });
-        c.querySelectorAll('h2').forEach(h => { h.style.color = '#333366'; });
-        c.querySelectorAll('p, li').forEach(p => { p.style.color = '#000000'; });
-      }
-    });
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pw = pdf.internal.pageSize.getWidth();
-    const ph = pdf.internal.pageSize.getHeight();
-    const imgW = pw;
-    const imgH = canvas.height * imgW / canvas.width;
-    const img = canvas.toDataURL('image/jpeg', 0.92);
-    let left = imgH, pos = 0;
-    pdf.addImage(img, 'JPEG', 0, pos, imgW, imgH);
-    left -= ph;
-    while (left > 0) {
-      pos -= ph;
-      pdf.addPage();
-      pdf.addImage(img, 'JPEG', 0, pos, imgW, imgH);
-      left -= ph;
-    }
-    pdf.save('工作汇报_' + fileStamp() + '.pdf');
+    localStorage.setItem(REPORT_PAYLOAD_KEY, JSON.stringify(payload));
   } catch (e) {
-    alert('PDF 生成失败：' + e.message);
-  } finally {
-    btn.disabled = false; btn.textContent = old;
-  }
-}
-
-// ---- 导出：高清打印版（浏览器另存 PDF，文字可选中） ----
-function exportReportPrint() {
-  if (!reportData) return;
-  window.print();
-}
-
-// 下载 Blob 的通用方法
-function downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function fileStamp() {
-  const n = new Date();
-  return n.getFullYear() + String(n.getMonth() + 1).padStart(2, '0') + String(n.getDate()).padStart(2, '0');
-}
-
-// 点击「AI 整理汇报」入口
-function onAiReportClick() {
-  if (!getAiKey()) {
-    alert('请先配置 DeepSeek API Key（右上角「⚙️ AI 设置」）');
-    openAiSettings();
+    alert('写入任务数据失败：' + e.message);
     return;
   }
-  openReportPage();
-  generateReport();
+  const w = window.open('report.html', '_blank');
+  if (!w) alert('新标签页被浏览器拦截，请允许本站弹出窗口后重试。');
 }
+
 
 // ============================================================
 //  EVENT LISTENERS
@@ -2279,18 +1828,12 @@ function setupEventListeners() {
   if (regPass) regPass.addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
   // Logout
   document.getElementById('logoutBtn').addEventListener('click', doLogout);
-  // AI 设置与汇报
+  // AI 设置与汇报（汇报展示在独立页面 report.html）
   document.getElementById('aiSettingsBtn').addEventListener('click', openAiSettings);
   document.getElementById('aiSaveBtn').addEventListener('click', saveAiSettings);
   document.getElementById('aiTestBtn').addEventListener('click', testAiConnection);
   document.getElementById('aiClearBtn').addEventListener('click', clearAiKey);
   document.getElementById('aiReportBtn').addEventListener('click', onAiReportClick);
-  document.getElementById('reportBackBtn').addEventListener('click', closeReportPage);
-  document.getElementById('reportRegenBtn').addEventListener('click', generateReport);
-  document.getElementById('exportWordBtn').addEventListener('click', exportReportWord);
-  document.getElementById('exportPdfBtn').addEventListener('click', exportReportPdf);
-  document.getElementById('exportPrintBtn').addEventListener('click', exportReportPrint);
-  document.getElementById('exportPptBtn').addEventListener('click', exportReportPpt);
   // New task
   document.getElementById('btnNewTask').addEventListener('click', () => {
     document.getElementById('newTaskTitle').value = '';

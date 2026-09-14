@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 工作汇报</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: linear-gradient(135deg, #0f0c29 0%, #1a1a3e 40%, #16213e 100%);
+  min-height: 100vh; color: #e0e0e0;
+}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+
+.page { max-width: 1080px; margin: 0 auto; padding: 24px 24px 48px; }
+
+/* 顶部栏 */
+.topbar {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 14px 20px; margin-bottom: 20px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+}
+.btn-back, .btn-regen {
+  padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: all 0.2s;
+}
+.btn-back { border: 1px solid rgba(255,255,255,0.15); background: transparent; color: rgba(255,255,255,0.75); }
+.btn-back:hover { background: rgba(255,255,255,0.08); }
+.btn-regen { border: 1px solid rgba(102,126,234,0.5); background: rgba(102,126,234,0.12); color: #9aa8f0; }
+.btn-regen:hover { background: rgba(102,126,234,0.25); }
+.btn-regen:disabled { opacity: 0.45; cursor: not-allowed; }
+.topbar .title { font-size: 16px; font-weight: 600; color: #e8e8e8; }
+.topbar .range { font-size: 13px; color: rgba(255,255,255,0.45); margin-left: auto; }
+
+/* 汇报正文 */
+.report-doc {
+  background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px; padding: 40px 44px; margin-bottom: 20px; color: #e0e0e0;
+}
+.report-doc h1 {
+  font-size: 24px; font-weight: 700; margin-bottom: 26px; padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.report-section { margin-bottom: 26px; }
+.report-section h2 {
+  font-size: 16px; font-weight: 600; color: #a9b6ff; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.report-section h2::before {
+  content: ''; width: 4px; height: 16px; border-radius: 2px;
+  background: linear-gradient(180deg, #667eea, #764ba2);
+}
+.report-section p { font-size: 14px; line-height: 1.85; color: #cfcfd8; text-align: justify; }
+.report-section ul { list-style: none; padding: 0; }
+.report-section li {
+  font-size: 14px; line-height: 1.85; color: #cfcfd8; padding-left: 20px;
+  position: relative; margin-bottom: 8px; text-align: justify;
+}
+.report-section li::before { content: '•'; position: absolute; left: 4px; color: #7c8cf0; font-weight: 700; }
+.placeholder { color: rgba(255,255,255,0.3); font-size: 14px; text-align: center; padding: 60px 0; }
+
+.loading { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.5); font-size: 13px; }
+.spinner {
+  width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.15);
+  border-top-color: #7c8cf0; border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.err-text { color: #ff8080; }
+
+/* 对话窗口 */
+.chat-box {
+  background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px; overflow: hidden; margin-bottom: 20px;
+}
+.chat-header {
+  padding: 14px 20px; font-size: 14px; font-weight: 600; color: #a9b6ff;
+  background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex; align-items: center; gap: 8px;
+}
+.chat-header .hint { font-size: 12px; font-weight: 400; color: rgba(255,255,255,0.35); }
+.chat-log { max-height: 340px; overflow-y: auto; padding: 16px 20px; }
+.chat-log:empty { display: none; }
+.chat-msg { margin-bottom: 14px; display: flex; gap: 10px; }
+.chat-msg .who {
+  flex: none; width: 30px; height: 30px; border-radius: 50%; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+.chat-msg.user .who { background: rgba(102,126,234,0.25); color: #9aa8f0; }
+.chat-msg.ai .who { background: rgba(219,39,119,0.22); color: #f0a0c8; }
+.chat-msg .bubble {
+  flex: 1; font-size: 13.5px; line-height: 1.7; color: #cfcfd8;
+  background: rgba(255,255,255,0.04); border-radius: 10px; padding: 10px 14px;
+  white-space: pre-wrap; word-break: break-word;
+}
+.chat-msg.user .bubble { background: rgba(102,126,234,0.12); color: #dfe3ff; }
+.chat-input-row { display: flex; gap: 10px; padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.06); }
+.chat-input-row textarea {
+  flex: 1; min-height: 52px; max-height: 140px; resize: vertical;
+  padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.06); color: #fff; font-size: 14px; outline: none;
+  font-family: inherit; line-height: 1.5;
+}
+.chat-input-row textarea:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.2); }
+.chat-input-row textarea::placeholder { color: rgba(255,255,255,0.25); }
+.btn-send {
+  flex: none; padding: 0 26px; border: none; border-radius: 10px;
+  background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.2s;
+}
+.btn-send:hover:not(:disabled) { transform: translateY(-1px); }
+.btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 导出栏 */
+.actions {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 16px 20px; background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+  position: sticky; bottom: 16px; backdrop-filter: blur(12px);
+}
+.actions .label { font-size: 13px; color: rgba(255,255,255,0.45); }
+.btn-export {
+  padding: 9px 20px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+  background: rgba(255,255,255,0.05); color: #e0e0e0; font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-export:hover:not(:disabled) { background: rgba(102,126,234,0.2); border-color: rgba(102,126,234,0.5); }
+.btn-export:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* 打印样式（高清打印版） */
+@media print {
+  body { background: #fff !important; }
+  .topbar, .chat-box, .actions { display: none !important; }
+  .page { max-width: none !important; padding: 0 !important; }
+  .report-doc {
+    background: #fff !important; border: none !important; border-radius: 0 !important;
+    padding: 0 !important; color: #000 !important; margin: 0 !important;
+  }
+  .report-doc h1 {
+    -webkit-text-fill-color: #1a1a3e !important; color: #1a1a3e !important;
+    background: none !important; border-bottom: 2px solid #333 !important;
+  }
+  .report-section h2 { color: #333 !important; }
+  .report-section h2::before { background: #333 !important; }
+  .report-section p, .report-section li { color: #000 !important; }
+  .report-section li::before { color: #333 !important; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="topbar">
+    <button class="btn-back" id="backBtn">← 返回看板</button>
+    <span class="title">📄 AI 工作汇报</span>
+    <span class="range" id="rangeInfo"></span>
+    <button class="btn-regen" id="regenBtn">重新生成</button>
+  </div>
+
+  <div class="report-doc" id="reportDoc">
+    <div class="placeholder" id="placeholder">正在读取任务数据…</div>
+  </div>
+
+  <!-- 对话窗口：可在生成内容基础上继续提要求 -->
+  <div class="chat-box">
+    <div class="chat-header">
+      💬 继续调整
+      <span class="hint">对 AI 提要求，例如"重点进展写详细些""语气更正式""补充风险分析"</span>
+    </div>
+    <div class="chat-log" id="chatLog"></div>
+    <div class="chat-input-row">
+      <textarea id="chatInput" placeholder="输入修改要求，Enter 发送 / Shift+Enter 换行"></textarea>
+      <button class="btn-send" id="chatSend">发送</button>
+    </div>
+  </div>
+
+  <div class="actions">
+    <span class="label">导出：</span>
+    <button class="btn-export" id="exportWordBtn" disabled>📘 Word</button>
+    <button class="btn-export" id="exportPdfBtn" disabled>📕 PDF</button>
+    <button class="btn-export" id="exportPrintBtn" disabled>🖨 高清打印版</button>
+    <button class="btn-export" id="exportPptBtn" disabled>📙 PPT</button>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>
+// ============================================================
+//  AI 工作汇报（独立页面）
+// ============================================================
+const DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/chat/completions';
+const PAYLOAD_KEY = 'report_payload';   // 由 index.html 写入（同源 localStorage 共享）
+
+const STATUS_LABELS = { pending: '待处理', processing: '处理中', completed: '已完成', cancelled: '已取消' };
+
+const REPORT_SYSTEM_PROMPT = [
+  '你是一名专业的职场助理，擅长把零散的任务数据整理成结构清晰、重点突出、可直接向上级汇报的中文工作汇报。',
+  '',
+  '要求：',
+  '1. 语言正式、简洁，用第三人称陈述，避免口语化表达',
+  '2. 突出成果与进展，尽量量化（完成数量、完成率、关键指标）',
+  '3. 客观说明问题与风险，对已取消任务归纳原因',
+  '4. 给出切实可行的下阶段计划建议',
+  '5. 严格只输出以下 JSON 结构，不要输出任何多余文字或代码块标记：',
+  '{"标题":"","概述":"","完成情况":[""],"重点进展":[""],"问题与风险":[""],"下阶段计划":[""]}'
+].join('\n');
+
+let payload = null;      // { uid, startVal, endVal, counts, list, model }
+let reportData = null;   // 最近一次规范化的汇报内容
+let conversation = [];   // 多轮对话消息（用于继续调整）
+let busy = false;
+
+// ---- 工具 ----
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = (s == null ? '' : String(s));
+  return d.innerHTML;
+}
+function fileStamp() {
+  const n = new Date();
+  return n.getFullYear() + String(n.getMonth() + 1).padStart(2, '0') + String(n.getDate()).padStart(2, '0');
+}
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function getAiKey() {
+  if (!payload) return '';
+  try { return localStorage.getItem('ds_key_' + payload.uid) || ''; } catch (e) { return ''; }
+}
+function getAiModel() {
+  if (!payload) return 'deepseek-flash';
+  try { return localStorage.getItem('ds_model_' + payload.uid) || 'deepseek-flash'; } catch (e) { return 'deepseek-flash'; }
+}
+
+// ---- 渲染汇报 ----
+function renderReport(r) {
+  const sec = (title, items) => {
+    if (!items || !items.length) return '';
+    return '<div class="report-section"><h2>' + escHtml(title) + '</h2><ul>'
+      + items.map(i => '<li>' + escHtml(i) + '</li>').join('') + '</ul></div>';
+  };
+  let html = '<h1>' + escHtml(r.title) + '</h1>';
+  if (r.summary) html += '<div class="report-section"><h2>概述</h2><p>' + escHtml(r.summary) + '</p></div>';
+  html += sec('完成情况', r.done);
+  html += sec('重点进展', r.progress);
+  html += sec('问题与风险', r.risks);
+  html += sec('下阶段计划', r.plan);
+  document.getElementById('reportDoc').innerHTML = html;
+}
+
+function normalizeReport(raw) {
+  const arr = v => {
+    if (Array.isArray(v)) return v.map(x => String(x)).filter(x => x.trim());
+    if (typeof v === 'string' && v.trim()) return [v];
+    return [];
+  };
+  const str = v => (v == null ? '' : String(v));
+  return {
+    title: str(raw['标题'] || raw.title) || '工作汇报',
+    summary: str(raw['概述'] || raw.summary),
+    done: arr(raw['完成情况'] || raw.done),
+    progress: arr(raw['重点进展'] || raw.progress),
+    risks: arr(raw['问题与风险'] || raw.risks),
+    plan: arr(raw['下阶段计划'] || raw.plan)
+  };
+}
+
+// ---- 对话日志 ----
+function addChatMsg(role, text) {
+  const log = document.getElementById('chatLog');
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + (role === 'user' ? 'user' : 'ai');
+  div.innerHTML = '<div class="who">' + (role === 'user' ? '我' : 'AI') + '</div>'
+    + '<div class="bubble">' + escHtml(text) + '</div>';
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ---- 初始任务数据文本 ----
+function buildInitialPrompt(d) {
+  const lines = [];
+  lines.push('统计区间：' + (d.startVal || '全部') + ' ~ ' + (d.endVal || '全部'));
+  lines.push('状态汇总：待处理' + d.counts.pending + '，处理中' + d.counts.processing
+    + '，已完成' + d.counts.completed + '，已取消' + d.counts.cancelled + '（共' + d.list.length + '项）');
+  lines.push('');
+  lines.push('任务明细：');
+  d.list.forEach(t => {
+    let s = '- ' + t.id + ' ' + t.title + ' [' + (STATUS_LABELS[t.status] || t.status) + ']';
+    s += ' 来源:' + (t.source || '未指定');
+    if (t.description) s += ' 描述:' + t.description;
+    if (t.status === 'cancelled' && t.cancelReason) s += ' 取消原因:' + t.cancelReason;
+    lines.push(s);
+  });
+  return lines.join('\n');
+}
+
+// ---- 调用 DeepSeek（流式） ----
+async function callDeepSeek(messages, onProgress) {
+  const key = getAiKey();
+  if (!key) throw new Error('未配置 API Key，请回到看板页面在「⚙️ AI 设置」中配置');
+
+  const res = await fetch(DEEPSEEK_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+    body: JSON.stringify({
+      model: getAiModel(),
+      messages: messages,
+      stream: true,
+      thinking: { type: 'disabled' },
+      response_format: { type: 'json_object' },
+      max_tokens: 4096
+    })
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error('接口返回 ' + res.status + '：' + t.slice(0, 200));
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let sseBuf = '', buffer = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    sseBuf += decoder.decode(value, { stream: true });
+    const parts = sseBuf.split('\n');
+    sseBuf = parts.pop();
+    for (const line of parts) {
+      const l = line.trim();
+      if (!l.startsWith('data:')) continue;
+      const pl = l.slice(5).trim();
+      if (pl === '[DONE]') continue;
+      try {
+        const o = JSON.parse(pl);
+        const delta = o.choices && o.choices[0] && o.choices[0].delta;
+        if (delta && delta.content) { buffer += delta.content; if (onProgress) onProgress(buffer.length); }
+      } catch (e) { /* 忽略不完整分片 */ }
+    }
+  }
+
+  // 解析 JSON（含兜底）
+  let parsed = null;
+  try { parsed = JSON.parse(buffer); } catch (e) {
+    const a = buffer.indexOf('{'), b = buffer.lastIndexOf('}');
+    if (a !== -1 && b > a) { try { parsed = JSON.parse(buffer.slice(a, b + 1)); } catch (e2) { parsed = null; } }
+  }
+  return { parsed, raw: buffer };
+}
+
+function setExportEnabled(on) {
+  ['exportWordBtn', 'exportPdfBtn', 'exportPrintBtn', 'exportPptBtn'].forEach(id => {
+    document.getElementById(id).disabled = !on;
+  });
+}
+
+// ---- 生成（首轮） ----
+async function generateInitial() {
+  if (busy || !payload) return;
+  busy = true;
+  setExportEnabled(false);
+  document.getElementById('regenBtn').disabled = true;
+  document.getElementById('chatSend').disabled = true;
+
+  conversation = [
+    { role: 'system', content: REPORT_SYSTEM_PROMPT },
+    { role: 'user', content: buildInitialPrompt(payload) }
+  ];
+
+  const doc = document.getElementById('reportDoc');
+  doc.innerHTML = '<div class="loading"><div class="spinner"></div><span id="genHint">AI 正在分析任务数据并生成汇报…</span></div>';
+
+  try {
+    const { parsed, raw } = await callDeepSeek(conversation, (n) => {
+      const h = document.getElementById('genHint');
+      if (h) h.textContent = 'AI 正在生成中…（已接收 ' + n + ' 字）';
+    });
+    if (!parsed) {
+      doc.innerHTML = '<h1>AI 工作汇报</h1><div class="report-section"><p>'
+        + escHtml(raw).replace(/\n/g, '<br>') + '</p></div>';
+      setExportEnabled(false);
+      addChatMsg('ai', '本次输出不是结构化 JSON，已按纯文本展示。你可以继续提要求让 AI 重新整理。');
+    } else {
+      reportData = normalizeReport(parsed);
+      conversation.push({ role: 'assistant', content: JSON.stringify(parsed) });
+      renderReport(reportData);
+      setExportEnabled(true);
+    }
+  } catch (e) {
+    doc.innerHTML = '<div class="report-section"><h2>生成失败</h2><p class="err-text">'
+      + escHtml(e.message || String(e)) + '</p><p style="font-size:13px;color:rgba(255,255,255,0.4)">'
+      + '请检查：API Key 是否有效、账户余额是否充足、网络是否可访问 api.deepseek.com。</p></div>';
+  } finally {
+    busy = false;
+    document.getElementById('regenBtn').disabled = false;
+    document.getElementById('chatSend').disabled = false;
+  }
+}
+
+// ---- 继续调整（对话重生成） ----
+async function sendRefinement() {
+  if (busy || !payload) return;
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  if (conversation.length === 0) {
+    alert('请先生成一次汇报');
+    return;
+  }
+
+  busy = true;
+  input.value = '';
+  document.getElementById('chatSend').disabled = true;
+  document.getElementById('regenBtn').disabled = true;
+  addChatMsg('user', text);
+  conversation.push({ role: 'user', content: text });
+
+  const doc = document.getElementById('reportDoc');
+  const prev = doc.innerHTML;
+  doc.innerHTML = '<div class="loading"><div class="spinner"></div><span id="genHint">AI 正在按你的要求调整…</span></div>';
+
+  try {
+    const { parsed, raw } = await callDeepSeek(conversation, (n) => {
+      const h = document.getElementById('genHint');
+      if (h) h.textContent = 'AI 正在调整中…（已接收 ' + n + ' 字）';
+    });
+    if (!parsed) {
+      doc.innerHTML = prev;
+      addChatMsg('ai', '调整失败：模型未返回有效结构，已保留上一版内容。可换个说法重试。');
+    } else {
+      reportData = normalizeReport(parsed);
+      conversation.push({ role: 'assistant', content: JSON.stringify(parsed) });
+      renderReport(reportData);
+      setExportEnabled(true);
+      addChatMsg('ai', '已按你的要求更新汇报内容。');
+    }
+  } catch (e) {
+    doc.innerHTML = prev;
+    addChatMsg('ai', '调整失败：' + (e.message || String(e)));
+  } finally {
+    busy = false;
+    document.getElementById('chatSend').disabled = false;
+    document.getElementById('regenBtn').disabled = false;
+    input.focus();
+  }
+}
+
+// ============================================================
+//  导出
+// ============================================================
+async function exportWord() {
+  if (!reportData) return;
+  const d = reportData;
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel } = window.docx;
+  const children = [];
+  children.push(new Paragraph({ text: d.title, heading: HeadingLevel.TITLE }));
+  children.push(new Paragraph({ children: [new TextRun({
+    text: '统计区间：' + (payload.startVal || '全部') + ' ~ ' + (payload.endVal || '全部')
+      + '　|　任务总数：' + payload.list.length, italics: true, color: '666666' })] }));
+  children.push(new Paragraph({ text: '' }));
+  if (d.summary) {
+    children.push(new Paragraph({ text: '一、概述', heading: HeadingLevel.HEADING_1 }));
+    children.push(new Paragraph({ text: d.summary }));
+    children.push(new Paragraph({ text: '' }));
+  }
+  [['二、完成情况', d.done], ['三、重点进展', d.progress],
+   ['四、问题与风险', d.risks], ['五、下阶段计划', d.plan]].forEach(([title, items]) => {
+    if (!items || !items.length) return;
+    children.push(new Paragraph({ text: title, heading: HeadingLevel.HEADING_1 }));
+    items.forEach(it => children.push(new Paragraph({ text: it, bullet: { level: 0 } })));
+    children.push(new Paragraph({ text: '' }));
+  });
+  const docx = new Document({ sections: [{ children }] });
+  const blob = await Packer.toBlob(docx);
+  downloadBlob(blob, '工作汇报_' + fileStamp() + '.docx');
+}
+
+async function exportPpt() {
+  if (!reportData) return;
+  const d = reportData;
+  const pptx = new window.PptxGenJS();
+  pptx.layout = 'LAYOUT_16x9';
+  const cover = pptx.addSlide();
+  cover.background = { color: '1A1A3E' };
+  cover.addText(d.title, { x: 0.6, y: 2.0, w: 8.8, h: 1.0, fontSize: 30, bold: true, color: 'FFFFFF', align: 'center' });
+  cover.addText('统计区间：' + (payload.startVal || '全部') + ' ~ ' + (payload.endVal || '全部')
+    + '　|　任务总数：' + payload.list.length,
+    { x: 0.6, y: 3.1, w: 8.8, h: 0.5, fontSize: 14, color: 'AAAACC', align: 'center' });
+
+  const addSec = (title, items, isText) => {
+    if (isText ? !items : (!items || !items.length)) return;
+    const s = pptx.addSlide();
+    s.addText(title, { x: 0.5, y: 0.35, w: 9, h: 0.6, fontSize: 22, bold: true, color: '333366' });
+    if (isText) {
+      s.addText(items, { x: 0.5, y: 1.1, w: 9, h: 4.2, fontSize: 14, color: '333333', lineSpacingMultiple: 1.4 });
+    } else {
+      s.addText(items.map(t => ({ text: t, options: { bullet: true, breakLine: true } })),
+        { x: 0.5, y: 1.1, w: 9, h: 4.2, fontSize: 14, color: '333333', lineSpacingMultiple: 1.4 });
+    }
+  };
+  if (d.summary) addSec('概述', d.summary, true);
+  addSec('完成情况', d.done, false);
+  addSec('重点进展', d.progress, false);
+  addSec('问题与风险', d.risks, false);
+  addSec('下阶段计划', d.plan, false);
+  await pptx.writeFile({ fileName: '工作汇报_' + fileStamp() + '.pptx' });
+}
+
+async function exportPdf() {
+  if (!reportData) return;
+  const el = document.getElementById('reportDoc');
+  const btn = document.getElementById('exportPdfBtn');
+  const old = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳ 生成中…';
+  try {
+    const canvas = await window.html2canvas(el, {
+      backgroundColor: '#ffffff', scale: 2, useCORS: true,
+      onclone: (cd) => {
+        const c = cd.getElementById('reportDoc');
+        if (!c) return;
+        c.style.background = '#ffffff'; c.style.border = 'none'; c.style.color = '#000000';
+        c.querySelectorAll('h1').forEach(h => {
+          h.style.webkitTextFillColor = '#1a1a3e'; h.style.color = '#1a1a3e'; h.style.background = 'none';
+        });
+        c.querySelectorAll('h2').forEach(h => { h.style.color = '#333366'; });
+        c.querySelectorAll('p, li').forEach(p => { p.style.color = '#000000'; });
+      }
+    });
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pw = pdf.internal.pageSize.getWidth();
+    const ph = pdf.internal.pageSize.getHeight();
+    const imgH = canvas.height * pw / canvas.width;
+    const img = canvas.toDataURL('image/jpeg', 0.92);
+    let pos = 0, left = imgH;
+    pdf.addImage(img, 'JPEG', 0, pos, pw, imgH);
+    left -= ph;
+    while (left > 0) {
+      pos -= ph;
+      pdf.addPage();
+      pdf.addImage(img, 'JPEG', 0, pos, pw, imgH);
+      left -= ph;
+    }
+    pdf.save('工作汇报_' + fileStamp() + '.pdf');
+  } catch (e) {
+    alert('PDF 生成失败：' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = old;
+  }
+}
+
+function exportPrint() {
+  if (!reportData) return;
+  window.print();
+}
+
+// ============================================================
+//  初始化
+// ============================================================
+function init() {
+  // 读取任务数据
+  try {
+    const raw = localStorage.getItem(PAYLOAD_KEY);
+    payload = raw ? JSON.parse(raw) : null;
+  } catch (e) { payload = null; }
+
+  if (!payload || !payload.list || payload.list.length === 0) {
+    document.getElementById('reportDoc').innerHTML =
+      '<div class="placeholder">未读取到任务数据。<br>请返回看板，在统计面板点击「✨ AI 整理汇报」重新进入。</div>';
+    document.getElementById('chatSend').disabled = true;
+    document.getElementById('regenBtn').disabled = true;
+    return;
+  }
+
+  document.getElementById('rangeInfo').textContent =
+    '统计区间：' + (payload.startVal || '全部') + ' ~ ' + (payload.endVal || '全部')
+    + '　共 ' + payload.list.length + ' 项任务';
+
+  if (!getAiKey()) {
+    document.getElementById('reportDoc').innerHTML =
+      '<div class="placeholder">未配置 DeepSeek API Key。<br>请返回看板，在右上角「⚙️ AI 设置」中配置后再来。</div>';
+    document.getElementById('chatSend').disabled = true;
+    return;
+  }
+
+  // 事件绑定
+  document.getElementById('regenBtn').addEventListener('click', generateInitial);
+  document.getElementById('chatSend').addEventListener('click', sendRefinement);
+  document.getElementById('chatInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendRefinement(); }
+  });
+  document.getElementById('exportWordBtn').addEventListener('click', exportWord);
+  document.getElementById('exportPdfBtn').addEventListener('click', exportPdf);
+  document.getElementById('exportPrintBtn').addEventListener('click', exportPrint);
+  document.getElementById('exportPptBtn').addEventListener('click', exportPpt);
+  document.getElementById('backBtn').addEventListener('click', () => {
+    if (window.opener) window.close();
+    else location.href = './index.html';
+  });
+
+  generateInitial();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
