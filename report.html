@@ -189,7 +189,7 @@ body {
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.iife.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -461,61 +461,430 @@ async function sendRefinement() {
 // ============================================================
 //  导出
 // ============================================================
+// Word 专业版导出
+// 依据 anthropics/skills@docx 规范：
+//  · 表格需同时设 columnWidths 与每个 cell 的 width（DXA）
+//  · 表格底纹必须用 ShadingType.CLEAR（SOLID 会渲染成黑色）
+//  · PageBreak 必须放在 Paragraph 内
+//  · 目录标题必须使用内置 HeadingLevel，并设 updateFields 才会自动更新
+//  · 不使用字面量「•」，项目符号交由 numbering 处理
 async function exportWord() {
   if (!reportData) return;
   const d = reportData;
-  const { Document, Packer, Paragraph, TextRun, HeadingLevel } = window.docx;
-  const children = [];
-  children.push(new Paragraph({ text: d.title, heading: HeadingLevel.TITLE }));
-  children.push(new Paragraph({ children: [new TextRun({
-    text: '统计区间：' + (payload.startVal || '全部') + ' ~ ' + (payload.endVal || '全部')
-      + '　|　任务总数：' + payload.list.length, italics: true, color: '666666' })] }));
-  children.push(new Paragraph({ text: '' }));
-  if (d.summary) {
-    children.push(new Paragraph({ text: '一、概述', heading: HeadingLevel.HEADING_1 }));
-    children.push(new Paragraph({ text: d.summary }));
-    children.push(new Paragraph({ text: '' }));
-  }
-  [['二、完成情况', d.done], ['三、重点进展', d.progress],
-   ['四、问题与风险', d.risks], ['五、下阶段计划', d.plan]].forEach(([title, items]) => {
-    if (!items || !items.length) return;
-    children.push(new Paragraph({ text: title, heading: HeadingLevel.HEADING_1 }));
-    items.forEach(it => children.push(new Paragraph({ text: it, bullet: { level: 0 } })));
-    children.push(new Paragraph({ text: '' }));
+  const D = window.docx;
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell,
+          WidthType, ShadingType, BorderStyle, AlignmentType, PageNumber, PageBreak,
+          Header, Footer, TableOfContents } = D;
+
+  const FONT   = '微软雅黑';
+  const NAVY   = '1E2761';
+  const INK    = '1A1A1A';
+  const MUTED  = '808080';
+  const ZEBRA  = 'F2F5FA';
+  const SZ_BODY = 21;   // 10.5pt 五号
+  const SZ_SUB  = 24;   // 12pt
+  const SZ_H    = 32;   // 16pt
+  const SZ_TITLE= 52;   // 26pt
+  const TABLE_W = 9000;
+  const COL_W = [3600, 2700, 2700];
+
+  const txt = (text, o = {}) => new TextRun({
+    text, font: FONT, size: o.size || SZ_BODY, bold: !!o.bold,
+    color: o.color || INK, italics: !!o.italics
   });
-  const docx = new Document({ sections: [{ children }] });
+
+  // 单元格（同时设置 width 与可选底纹）
+  const cell = (text, o = {}) => new TableCell({
+    width: { size: o.w, type: WidthType.DXA },
+    ...(o.fill ? { shading: { type: ShadingType.CLEAR, fill: o.fill, color: 'auto' } } : {}),
+    margins: { top: 90, bottom: 90, left: 150, right: 150 },
+    children: [new Paragraph({
+      alignment: o.align || AlignmentType.LEFT,
+      children: [txt(text, { bold: o.bold, color: o.color, size: o.size })]
+    })]
+  });
+
+  // 章节标题（用内置 Heading 以便进入目录）
+  const sectionHeading = (text) => new Paragraph({
+    heading: HeadingLevel.HEADING_1,
+    spacing: { before: 320, after: 160 },
+    children: [txt(text, { size: SZ_H, bold: true, color: NAVY })]
+  });
+
+  const bodyPara = (text) => new Paragraph({
+    spacing: { after: 140, line: 340 },
+    children: [txt(text)]
+  });
+
+  const bullet = (text) => new Paragraph({
+    bullet: { level: 0 },
+    spacing: { after: 100, line: 340 },
+    children: [txt(text)]
+  });
+
+  const CN = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+  let idx = 0;
+  const num = () => CN[idx++] || String(idx);
+
+  const children = [];
+
+  // ---------- 封面页 ----------
+  children.push(new Paragraph({ spacing: { before: 2600 }, children: [] }));
+  children.push(new Paragraph({
+    alignment: AlignmentType.CENTER, spacing: { after: 400 },
+    children: [txt(d.title, { size: SZ_TITLE, bold: true, color: NAVY })]
+  }));
+  children.push(new Paragraph({
+    alignment: AlignmentType.CENTER, spacing: { after: 140 },
+    children: [txt('统计区间：' + (payload.startVal || '全部') + ' ~ ' + (payload.endVal || '全部'), { size: SZ_SUB, color: MUTED })]
+  }));
+  children.push(new Paragraph({
+    alignment: AlignmentType.CENTER, spacing: { after: 140 },
+    children: [txt('任务总数：' + payload.list.length + ' 项', { size: SZ_SUB, color: MUTED })]
+  }));
+  children.push(new Paragraph({
+    alignment: AlignmentType.CENTER,
+    children: [txt('生成日期：' + wordToday(), { size: SZ_SUB, color: MUTED })]
+  }));
+  children.push(new Paragraph({ children: [new PageBreak()] }));
+
+  // ---------- 目录 ----------
+  children.push(new Paragraph({
+    spacing: { after: 220 },
+    children: [txt('目　录', { size: SZ_H, bold: true, color: NAVY })]
+  }));
+  children.push(new TableOfContents('目录', { hyperlink: true, headingStyleRange: '1-2' }));
+  children.push(new Paragraph({ children: [new PageBreak()] }));
+
+  // ---------- 正文 ----------
+  if (d.summary) {
+    children.push(sectionHeading(num() + '、概述'));
+    children.push(bodyPara(d.summary));
+  }
+
+  // 数据汇总表
+  children.push(sectionHeading(num() + '、数据汇总'));
+  const c = (payload.counts || {});
+  const rowsCounts = [
+    ['待处理', c.pending || 0],
+    ['处理中', c.processing || 0],
+    ['已完成', c.completed || 0],
+    ['已取消', c.cancelled || 0]
+  ];
+  const totalForPct = payload.list.length || 1;
+  const tableRows = [
+    new TableRow({
+      tableHeader: true,
+      children: [
+        cell('状态', { w: COL_W[0], bold: true, fill: NAVY, color: 'FFFFFF', align: AlignmentType.CENTER }),
+        cell('数量', { w: COL_W[1], bold: true, fill: NAVY, color: 'FFFFFF', align: AlignmentType.CENTER }),
+        cell('占比', { w: COL_W[2], bold: true, fill: NAVY, color: 'FFFFFF', align: AlignmentType.CENTER })
+      ]
+    })
+  ];
+  rowsCounts.forEach(([label, n], i) => {
+    const fill = i % 2 === 1 ? ZEBRA : undefined;
+    const pct = totalForPct ? Math.round((n / totalForPct) * 100) + '%' : '0%';
+    tableRows.push(new TableRow({
+      children: [
+        cell(label, { w: COL_W[0], fill }),
+        cell(String(n), { w: COL_W[1], fill, align: AlignmentType.CENTER }),
+        cell(pct, { w: COL_W[2], fill, align: AlignmentType.CENTER })
+      ]
+    }));
+  });
+  children.push(new Table({
+    width: { size: TABLE_W, type: WidthType.DXA },
+    columnWidths: COL_W,
+    rows: tableRows
+  }));
+  children.push(new Paragraph({ spacing: { after: 120 }, children: [] }));
+
+  // 各内容章节
+  [['完成情况', d.done], ['重点进展', d.progress],
+   ['问题与风险', d.risks], ['下阶段计划', d.plan]].forEach(([title, items]) => {
+    if (!items || !items.length) return;
+    children.push(sectionHeading(num() + '、' + title));
+    items.forEach(it => children.push(bullet(it)));
+  });
+
+  // ---------- 页眉 / 页脚 ----------
+  const header = new Header({
+    children: [new Paragraph({
+      alignment: AlignmentType.RIGHT,
+      border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'D9D9D9', space: 4 } },
+      children: [txt('工作汇报', { size: 18, color: MUTED })]
+    })]
+  });
+  const footer = new Footer({
+    children: [new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [
+        txt('第 ', { size: 18, color: MUTED }),
+        new TextRun({ children: [PageNumber.CURRENT], font: FONT, size: 18, color: MUTED }),
+        txt(' 页 / 共 ', { size: 18, color: MUTED }),
+        new TextRun({ children: [PageNumber.TOTAL_PAGES], font: FONT, size: 18, color: MUTED }),
+        txt(' 页', { size: 18, color: MUTED })
+      ]
+    })]
+  });
+
+  const docx = new Document({
+    features: { updateFields: true },   // 打开时自动更新目录页码
+    styles: { default: { document: { run: { font: FONT, size: SZ_BODY, color: INK } } } },
+    sections: [{
+      properties: { page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
+      headers: { default: header },
+      footers: { default: footer },
+      children
+    }]
+  });
   const blob = await Packer.toBlob(docx);
   downloadBlob(blob, '工作汇报_' + fileStamp() + '.docx');
 }
 
+function wordToday() {
+  const n = new Date();
+  return n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
+}
+
+// PPT 专业版导出（科技深色）
+// 依据 anthropics/skills@pptx 规范：
+//  · pres.layout 必须在 addSlide 之前设置（LAYOUT_16x9 = 10"×5.625"）
+//  · 十六进制颜色不带 #、不用 8 位（否则文件损坏）
+//  · 不复用同一个 options 对象（库会原地改写为 EMU）
+//  · 项目符号用 bullet:true（不写字面 •），breakLine 只设在非末项
+//  · 段落间距用 paraSpaceAfter，不要用 lineSpacing
+//  · 每页都要有视觉元素；标题 36pt±；不用装饰性色条/下划线
 async function exportPpt() {
   if (!reportData) return;
   const d = reportData;
-  const pptx = new window.PptxGenJS();
-  pptx.layout = 'LAYOUT_16x9';
-  const cover = pptx.addSlide();
-  cover.background = { color: '1A1A3E' };
-  cover.addText(d.title, { x: 0.6, y: 2.0, w: 8.8, h: 1.0, fontSize: 30, bold: true, color: 'FFFFFF', align: 'center' });
-  cover.addText('统计区间：' + (payload.startVal || '全部') + ' ~ ' + (payload.endVal || '全部')
-    + '　|　任务总数：' + payload.list.length,
-    { x: 0.6, y: 3.1, w: 8.8, h: 0.5, fontSize: 14, color: 'AAAACC', align: 'center' });
 
-  const addSec = (title, items, isText) => {
-    if (isText ? !items : (!items || !items.length)) return;
+  const BG    = '0B1020';   // 深色背景
+  const CARD  = '151C33';   // 卡片底色
+  const NAVY  = '1E2761';   // 主色
+  const ICE   = 'CADCFC';   // 次色
+  const MINT  = '02C39A';   // 强调色
+  const WHITE = 'FFFFFF';
+  const BODY  = 'C7D2E5';
+  const MUTED = '8FA3C8';
+  const FONT  = '微软雅黑';
+
+  const pptx = new window.PptxGenJS();
+  pptx.layout = 'LAYOUT_16x9';       // 10" × 5.625"
+
+  const c = payload.counts || {};
+  const total = payload.list.length || 1;
+  const rangeText = (payload.startVal || '全部') + ' ~ ' + (payload.endVal || '全部');
+
+  // 统一的深色背景 + 视觉母题（薄荷色圆点），供各页复用
+  const paintBg = (s) => { s.background = { color: BG }; };
+  const addDot = (s, x, y, size, color, transparency) => {
+    s.addShape(pptx.ShapeType.ellipse, {
+      x, y, w: size, h: size,
+      fill: { color, transparency },
+      line: { color, width: 0 }
+    });
+  };
+  // 页码（手动绘制，避免依赖 slideNumber 选项）
+  const addPager = (s, n) => {
+    s.addText(String(n), { x: 9.2, y: 5.12, w: 0.5, h: 0.3, fontFace: FONT, fontSize: 10, color: MUTED, align: 'right', margin: 0 });
+  };
+  // 内容页标题 + 编号圆点
+  const addHeading = (s, num, text) => {
+    s.addShape(pptx.ShapeType.ellipse, { x: 0.5, y: 0.42, w: 0.42, h: 0.42, fill: { color: MINT }, line: { color: MINT, width: 0 } });
+    s.addText(String(num), { x: 0.5, y: 0.42, w: 0.42, h: 0.42, fontFace: FONT, fontSize: 14, bold: true, color: '06251E', align: 'center', valign: 'middle', margin: 0 });
+    s.addText(text, { x: 1.06, y: 0.36, w: 8.4, h: 0.56, fontFace: FONT, fontSize: 30, bold: true, color: WHITE, align: 'left', valign: 'middle', margin: 0 });
+  };
+
+  // ---------- 1. 封面 ----------
+  const cover = pptx.addSlide();
+  paintBg(cover);
+  addDot(cover, 7.4, -1.1, 3.6, NAVY, 55);
+  addDot(cover, 8.6, 3.5, 2.4, MINT, 78);
+  addDot(cover, -1.0, 3.8, 2.8, NAVY, 62);
+  cover.addText(d.title, {
+    x: 0.7, y: 1.86, w: 8.6, h: 1.2, fontFace: FONT, fontSize: 40, bold: true,
+    color: WHITE, align: 'center', valign: 'middle', margin: 0
+  });
+  cover.addText('统计区间：' + rangeText, {
+    x: 0.7, y: 3.16, w: 8.6, h: 0.4, fontFace: FONT, fontSize: 14, color: ICE, align: 'center', margin: 0
+  });
+  cover.addText('任务总数 ' + payload.list.length + ' 项　·　AI 自动生成', {
+    x: 0.7, y: 3.62, w: 8.6, h: 0.4, fontFace: FONT, fontSize: 12, color: MUTED, align: 'center', margin: 0
+  });
+
+  // ---------- 2. 目录 ----------
+  const agendaItems = [];
+  if (d.summary) agendaItems.push('概述');
+  agendaItems.push('数据汇总');
+  if (d.done && d.done.length) agendaItems.push('完成情况');
+  if (d.progress && d.progress.length) agendaItems.push('重点进展');
+  if (d.risks && d.risks.length) agendaItems.push('问题与风险');
+  if (d.plan && d.plan.length) agendaItems.push('下阶段计划');
+
+  const agenda = pptx.addSlide();
+  paintBg(agenda);
+  addDot(agenda, 8.9, -0.9, 2.8, NAVY, 62);
+  agenda.addText('目录', { x: 0.5, y: 0.42, w: 9, h: 0.6, fontFace: FONT, fontSize: 30, bold: true, color: WHITE, margin: 0 });
+  agendaItems.forEach((label, i) => {
+    const y = 1.46 + i * 0.66;
+    agenda.addShape(pptx.ShapeType.ellipse, { x: 0.72, y: y, w: 0.34, h: 0.34, fill: { color: MINT, transparency: i === 0 ? 0 : 25 }, line: { color: MINT, width: 0 } });
+    agenda.addText(String(i + 1), { x: 0.72, y: y, w: 0.34, h: 0.34, fontFace: FONT, fontSize: 12, bold: true, color: '06251E', align: 'center', valign: 'middle', margin: 0 });
+    agenda.addText(label, { x: 1.26, y: y - 0.03, w: 7.6, h: 0.4, fontFace: FONT, fontSize: 16, color: BODY, valign: 'middle', margin: 0 });
+  });
+  addPager(agenda, 2);
+
+  // ---------- 3. 数据总览（大号数字） ----------
+  const stats = pptx.addSlide();
+  paintBg(stats);
+  stats.addText('数据总览', { x: 0.5, y: 0.42, w: 9, h: 0.6, fontFace: FONT, fontSize: 30, bold: true, color: WHITE, margin: 0 });
+  const cards = [
+    ['待处理', c.pending || 0, ICE],
+    ['处理中', c.processing || 0, MINT],
+    ['已完成', c.completed || 0, '7BD88F'],
+    ['已取消', c.cancelled || 0, MUTED]
+  ];
+  const cw = 2.1, gap = 0.2, cx0 = 0.5;
+  cards.forEach(([label, val, accent], i) => {
+    const x = cx0 + i * (cw + gap);
+    stats.addShape(pptx.ShapeType.roundRect, {
+      x, y: 1.62, w: cw, h: 2.15, rectRadius: 0.1,
+      fill: { color: CARD }, line: { color: NAVY, width: 1 }
+    });
+    stats.addText(String(val), {
+      x, y: 1.9, w: cw, h: 1.05, fontFace: FONT, fontSize: 54, bold: true,
+      color: accent, align: 'center', valign: 'middle', margin: 0
+    });
+    stats.addText(label, {
+      x, y: 3.02, w: cw, h: 0.4, fontFace: FONT, fontSize: 13,
+      color: MUTED, align: 'center', margin: 0
+    });
+    stats.addText((Math.round((val / total) * 100)) + '%', {
+      x, y: 3.4, w: cw, h: 0.32, fontFace: FONT, fontSize: 11,
+      color: MUTED, align: 'center', margin: 0
+    });
+  });
+  addPager(stats, 3);
+
+  // ---------- 4. 状态分布（原生图表 + 关键指标） ----------
+  const chartSlide = pptx.addSlide();
+  paintBg(chartSlide);
+  chartSlide.addText('状态分布', { x: 0.5, y: 0.42, w: 9, h: 0.6, fontFace: FONT, fontSize: 30, bold: true, color: WHITE, margin: 0 });
+  chartSlide.addChart(pptx.ChartType.doughnut, [{
+    name: '任务状态',
+    labels: ['待处理', '处理中', '已完成', '已取消'],
+    values: [c.pending || 0, c.processing || 0, c.completed || 0, c.cancelled || 0]
+  }], {
+    x: 0.5, y: 1.36, w: 5.1, h: 3.6,
+    chartColors: [ICE, MINT, '7BD88F', MUTED],
+    holeSize: 55,
+    showLegend: true, legendPos: 'b', legendColor: BODY, legendFontFace: FONT, legendFontSize: 11,
+    showTitle: false,
+    showPercent: true, dataLabelColor: WHITE, dataLabelFontFace: FONT, dataLabelFontSize: 11,
+    border: { pt: 0, color: BG }
+  });
+  const doneRate = Math.round(((c.completed || 0) / total) * 100);
+  chartSlide.addShape(pptx.ShapeType.roundRect, {
+    x: 5.85, y: 1.5, w: 3.65, h: 1.5, rectRadius: 0.1,
+    fill: { color: CARD }, line: { color: NAVY, width: 1 }
+  });
+  chartSlide.addText('完成率', { x: 6.05, y: 1.66, w: 3.25, h: 0.35, fontFace: FONT, fontSize: 13, color: MUTED, margin: 0 });
+  chartSlide.addText(doneRate + '%', { x: 6.05, y: 2.02, w: 3.25, h: 0.82, fontFace: FONT, fontSize: 44, bold: true, color: MINT, margin: 0 });
+  chartSlide.addShape(pptx.ShapeType.roundRect, {
+    x: 5.85, y: 3.2, w: 3.65, h: 1.76, rectRadius: 0.1,
+    fill: { color: CARD }, line: { color: NAVY, width: 1 }
+  });
+  chartSlide.addText(
+    '共 ' + payload.list.length + ' 项任务\n已完成 ' + (c.completed || 0) + ' 项\n进行中 ' + ((c.processing || 0) + (c.pending || 0)) + ' 项',
+    { x: 6.05, y: 3.4, w: 3.25, h: 1.4, fontFace: FONT, fontSize: 13, color: BODY, lineSpacingMultiple: 1.35, margin: 0 }
+  );
+  addPager(chartSlide, 4);
+
+  // ---------- 5. 内容页 ----------
+  // 依据条目数量自动选择字号，避免文字溢出
+  const fitFont = (items) => {
+    const chars = (items || []).reduce((n, s) => n + String(s).length, 0);
+    if (chars > 420) return 11;
+    if (chars > 300) return 12;
+    if (chars > 190) return 13;
+    return 15;
+  };
+  // bullet 数组：breakLine 只设在非末项
+  const bulletRuns = (items) => items.map((t, i) => ({
+    text: String(t),
+    options: { bullet: true, breakLine: i < items.length - 1 }
+  }));
+
+  let secNo = 1;
+  const contentSlide = (label, items, mode) => {
     const s = pptx.addSlide();
-    s.addText(title, { x: 0.5, y: 0.35, w: 9, h: 0.6, fontSize: 22, bold: true, color: '333366' });
-    if (isText) {
-      s.addText(items, { x: 0.5, y: 1.1, w: 9, h: 4.2, fontSize: 14, color: '333333', lineSpacingMultiple: 1.4 });
+    paintBg(s);
+    addDot(s, 8.95, 4.6, 2.2, NAVY, 68);
+    addHeading(s, secNo, label);
+    addPager(s, 4 + secNo);
+    secNo++;
+
+    if (mode === 'text') {
+      s.addShape(pptx.ShapeType.roundRect, {
+        x: 0.5, y: 1.2, w: 9, h: 4.0, rectRadius: 0.1,
+        fill: { color: CARD }, line: { color: NAVY, width: 1 }
+      });
+      s.addText(items, {
+        x: 0.85, y: 1.48, w: 8.3, h: 3.5, fontFace: FONT, fontSize: 15,
+        color: BODY, lineSpacingMultiple: 1.5, valign: 'top', margin: 0
+      });
+    } else if (mode === 'steps') {
+      // 编号步骤式：视觉母题复用
+      items.forEach((t, i) => {
+        const y = 1.24 + i * 0.68;
+        s.addShape(pptx.ShapeType.ellipse, { x: 0.72, y: y, w: 0.36, h: 0.36, fill: { color: MINT }, line: { color: MINT, width: 0 } });
+        s.addText(String(i + 1), { x: 0.72, y: y, w: 0.36, h: 0.36, fontFace: FONT, fontSize: 12, bold: true, color: '06251E', align: 'center', valign: 'middle', margin: 0 });
+        s.addShape(pptx.ShapeType.roundRect, {
+          x: 1.26, y: y - 0.06, w: 8.24, h: 0.6, rectRadius: 0.06,
+          fill: { color: CARD }, line: { color: NAVY, width: 1 }
+        });
+        s.addText(String(t), { x: 1.48, y: y - 0.06, w: 7.86, h: 0.6, fontFace: FONT, fontSize: 12, color: BODY, valign: 'middle', margin: 0 });
+      });
     } else {
-      s.addText(items.map(t => ({ text: t, options: { bullet: true, breakLine: true } })),
-        { x: 0.5, y: 1.1, w: 9, h: 4.2, fontSize: 14, color: '333333', lineSpacingMultiple: 1.4 });
+      // 要点卡片式
+      s.addShape(pptx.ShapeType.roundRect, {
+        x: 0.5, y: 1.2, w: 9, h: 4.0, rectRadius: 0.1,
+        fill: { color: CARD }, line: { color: NAVY, width: 1 }
+      });
+      const fs = fitFont(items);
+      s.addText(bulletRuns(items), {
+        x: 0.85, y: 1.46, w: 8.3, h: 3.55, fontFace: FONT, fontSize: fs,
+        color: BODY, paraSpaceAfter: 10, valign: 'top', margin: 0
+      });
     }
   };
-  if (d.summary) addSec('概述', d.summary, true);
-  addSec('完成情况', d.done, false);
-  addSec('重点进展', d.progress, false);
-  addSec('问题与风险', d.risks, false);
-  addSec('下阶段计划', d.plan, false);
+
+  if (d.summary) contentSlide('概述', d.summary, 'text');
+  contentSlide('数据汇总', [
+    '待处理 ' + (c.pending || 0) + ' 项',
+    '处理中 ' + (c.processing || 0) + ' 项',
+    '已完成 ' + (c.completed || 0) + ' 项',
+    '已取消 ' + (c.cancelled || 0) + ' 项'
+  ], 'list');
+  if (d.done && d.done.length) contentSlide('完成情况', d.done, 'list');
+  if (d.progress && d.progress.length) contentSlide('重点进展', d.progress, 'list');
+  if (d.risks && d.risks.length) contentSlide('问题与风险', d.risks, 'list');
+  if (d.plan && d.plan.length) contentSlide('下阶段计划', d.plan, 'steps');
+
+  // ---------- 6. 结束页 ----------
+  const end = pptx.addSlide();
+  paintBg(end);
+  addDot(end, 7.2, -1.2, 3.8, NAVY, 55);
+  addDot(end, -0.9, 3.4, 2.6, MINT, 78);
+  end.addText('汇报完毕', {
+    x: 0.7, y: 2.1, w: 8.6, h: 0.9, fontFace: FONT, fontSize: 34, bold: true,
+    color: WHITE, align: 'center', valign: 'middle', margin: 0
+  });
+  end.addText(rangeText + '　·　共 ' + payload.list.length + ' 项任务', {
+    x: 0.7, y: 3.14, w: 8.6, h: 0.4, fontFace: FONT, fontSize: 12, color: MUTED, align: 'center', margin: 0
+  });
+
   await pptx.writeFile({ fileName: '工作汇报_' + fileStamp() + '.pptx' });
 }
 
