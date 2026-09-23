@@ -139,6 +139,14 @@ body {
 }
 .task-title:hover { color: #667eea; }
 .task-source { font-size: 12px; color: rgba(255,255,255,0.35); margin-bottom: 10px; }
+/* 卡片上的阶段时间标签 */
+.task-time {
+  font-size: 11px; color: rgba(255,255,255,0.42); margin: -4px 0 10px;
+  display: inline-block; padding: 2px 8px; border-radius: 5px;
+  background: rgba(255,255,255,0.05);
+}
+.task-time.done { color: #8FE04A; background: rgba(126,211,33,0.12); }
+.task-time.cancelled { color: #B0B0B0; background: rgba(155,155,155,0.12); }
 .task-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .task-actions button {
   padding: 5px 14px; border: none; border-radius: 6px; font-size: 12px;
@@ -304,6 +312,11 @@ body {
 }
 
 .stats-body { display: flex; align-items: flex-end; gap: 24px; height: 80px; }
+/* 统计口径说明 */
+.stats-scope-hint {
+  font-size: 11.5px; color: rgba(255,255,255,0.38); margin: -8px 0 12px;
+  padding-left: 2px; line-height: 1.5;
+}
 .stat-bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .stat-bar-track { width: 100%; height: 48px; background: rgba(255,255,255,0.04); border-radius: 6px; position: relative; overflow: hidden; }
 .stat-bar-fill {
@@ -547,6 +560,7 @@ body {
         <button class="stats-export-btn" id="statsExport">📥 导出 CSV</button>
       </div>
     </div>
+    <div class="stats-scope-hint">待处理 / 处理中为当前存量（不受区间限制）；已完成按完成时间、已取消按取消时间统计</div>
     <div class="stats-body" id="statsBody">
       <div class="stat-bar-group bar-pending">
         <div class="stat-bar-count" id="statsCount-pending">0</div>
@@ -793,6 +807,9 @@ function toCloudRow(t) {
     order: t.order || 0,
     cancel_reason: t.cancelReason || '',
     created_at: t.createdAt || new Date().toISOString(),
+    started_at: t.startedAt || null,
+    completed_at: t.completedAt || null,
+    cancelled_at: t.cancelledAt || null,
     updated_at: t.updatedAt || new Date().toISOString()
   };
 }
@@ -808,6 +825,9 @@ function fromCloudRow(r) {
     order: r.order || 0,
     cancelReason: r.cancel_reason || '',
     createdAt: r.created_at,
+    startedAt: r.started_at || '',
+    completedAt: r.completed_at || '',
+    cancelledAt: r.cancelled_at || '',
     updatedAt: r.updated_at,
     deletedAt: r.deleted_at || null
   };
@@ -978,6 +998,44 @@ function genTaskId() {
 // ============================================================
 //  TASK CRUD
 // ============================================================
+// ============================================================
+//  状态流转的时间戳维护
+//  规则（跟随当前状态）：
+//   · 进入某阶段时写入该阶段时间戳（首次进入才写，不覆盖）
+//   · 回退时清除「更后阶段」的时间戳，保证标签与当前状态一致
+//   · 任何流转都刷新 updatedAt（最后更新时间）
+// ============================================================
+function applyStatusFields(task, newStatus, opts) {
+  const now = new Date().toISOString();
+  const o = opts || {};
+  task.status = newStatus;
+  task.updatedAt = now;               // 所有任务都有最后更新时间
+
+  if (newStatus === 'pending') {
+    // 回到待处理：尚未启动/完成/取消
+    task.startedAt = '';
+    task.completedAt = '';
+    task.cancelledAt = '';
+    task.cancelReason = '';
+  } else if (newStatus === 'processing') {
+    // 处理中：清除完成/取消（后阶段），启动时间保留，首次则写入
+    task.completedAt = '';
+    task.cancelledAt = '';
+    task.cancelReason = '';
+    if (!task.startedAt) task.startedAt = now;
+  } else if (newStatus === 'completed') {
+    // 已完成：清除取消（后阶段），完成时间首次写入
+    task.cancelledAt = '';
+    task.cancelReason = '';
+    if (!task.completedAt) task.completedAt = now;
+  } else if (newStatus === 'cancelled') {
+    // 已取消：清除完成；取消时间首次写入；取消原因由调用方提供
+    task.completedAt = '';
+    if (!task.cancelledAt) task.cancelledAt = now;
+    if (o.reason != null) task.cancelReason = o.reason;
+  }
+}
+
 function createTask(title, desc, source) {
   const now = new Date().toISOString();
   const allPending = tasks.filter(t => t.status === 'pending');
@@ -991,6 +1049,9 @@ function createTask(title, desc, source) {
     order: maxOrder + 1,
     cancelReason: '',
     createdAt: now,
+    startedAt: '',
+    completedAt: '',
+    cancelledAt: '',
     updatedAt: now
   };
   tasks.push(task);
@@ -1002,12 +1063,7 @@ function createTask(title, desc, source) {
 function updateTaskStatus(taskId, newStatus, cancelReason) {
   const task = tasks.find(t => t.id === taskId);
   if (!task) return;
-  const oldStatus = task.status;
-  task.status = newStatus;
-  task.updatedAt = new Date().toISOString();
-  if (newStatus === 'cancelled') {
-    task.cancelReason = cancelReason || '';
-  }
+  applyStatusFields(task, newStatus, { reason: cancelReason });
   // Place at the end of the new column
   const sameStatus = tasks.filter(t => t.status === newStatus && t.id !== taskId);
   task.order = sameStatus.length > 0 ? Math.max(...sameStatus.map(t => t.order)) + 1 : 0;
@@ -1018,9 +1074,7 @@ function updateTaskStatus(taskId, newStatus, cancelReason) {
 function reorderTask(taskId, newStatus, targetIndex) {
   const task = tasks.find(t => t.id === taskId);
   if (!task) return;
-  const oldStatus = task.status;
-  task.status = newStatus;
-  task.updatedAt = new Date().toISOString();
+  applyStatusFields(task, newStatus);
   // Get all tasks in the target status (excluding the moved task)
   let sameStatus = tasks.filter(t => t.status === newStatus && t.id !== taskId);
   // Insert at targetIndex
@@ -1085,6 +1139,22 @@ function renderCard(task) {
     `;
   }
 
+  // 当前阶段的时间标签（沿用时间戳，缺失时回落到最后更新/创建）
+  let timeHtml = '';
+  if (status === 'pending') {
+    const t = task.createdAt;
+    if (t) timeHtml = `<div class="task-time">🕐 创建 ${shortTime(t)}</div>`;
+  } else if (status === 'processing') {
+    const t = task.startedAt || task.updatedAt || task.createdAt;
+    if (t) timeHtml = `<div class="task-time">▶ 启动 ${shortTime(t)}</div>`;
+  } else if (status === 'completed') {
+    const t = task.completedAt || task.updatedAt || task.createdAt;
+    if (t) timeHtml = `<div class="task-time done">✓ 完成 ${shortTime(t)}</div>`;
+  } else if (status === 'cancelled') {
+    const t = task.cancelledAt || task.updatedAt || task.createdAt;
+    if (t) timeHtml = `<div class="task-time cancelled">✕ 取消 ${shortTime(t)}</div>`;
+  }
+
   return `
     <div class="task-card" draggable="true" data-task-id="${task.id}"
          ondragstart="onDragStart(event)" ondragend="onDragEnd(event)"
@@ -1092,9 +1162,22 @@ function renderCard(task) {
       <div class="task-id" onclick="event.stopPropagation(); showDetail('${task.id}')">${task.id}</div>
       <div class="task-title" onclick="event.stopPropagation(); showDetail('${task.id}')">${escHtml(task.title)}</div>
       <div class="task-source">🏷️ ${escHtml(task.source)}</div>
+      ${timeHtml}
       <div class="task-actions">${actionHtml}</div>
     </div>
   `;
+}
+
+// 卡片上的短时间格式：MM-DD HH:mm
+function shortTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${m}-${day} ${h}:${mi}`;
 }
 
 function escHtml(s) {
@@ -1241,6 +1324,7 @@ function renderTrash() {
   }).join('');
 }
 
+// 取消确认（同时服务于按钮触发与拖拽触发；拖拽会带 toIndex）
 function doConfirmCancel() {
   const reason = document.getElementById('cancelReasonInput').value.trim();
   if (!reason) {
@@ -1251,11 +1335,16 @@ function doConfirmCancel() {
   if (pendingCancel) {
     const task = tasks.find(t => t.id === pendingCancel.taskId);
     if (task) {
-      task.cancelReason = reason;
-      task.status = 'cancelled';
-      task.updatedAt = new Date().toISOString();
-      const sameStatus = tasks.filter(t => t.status === 'cancelled' && t.id !== task.id);
-      task.order = sameStatus.length > 0 ? Math.max(...sameStatus.map(t => t.order)) + 1 : 0;
+      const toStatus = pendingCancel.toStatus || 'cancelled';
+      applyStatusFields(task, toStatus, { reason: reason });
+      const sameStatus = tasks.filter(t => t.status === toStatus && t.id !== task.id);
+      const idx = pendingCancel.toIndex;
+      if (idx !== undefined && idx <= sameStatus.length) {
+        sameStatus.splice(idx, 0, task);
+      } else {
+        sameStatus.push(task);
+      }
+      sameStatus.forEach((t, i) => t.order = i);
       saveToStorage();
       renderAll();
     }
@@ -1298,6 +1387,18 @@ function showDetail(taskId) {
     <div class="detail-field">
       <div class="label">创建时间</div>
       <div class="value">${formatTime(task.createdAt)}</div>
+    </div>
+    <div class="detail-field">
+      <div class="label">启动时间</div>
+      <div class="value">${task.startedAt ? formatTime(task.startedAt) : '<span style="color:rgba(255,255,255,0.3)">未启动</span>'}</div>
+    </div>
+    <div class="detail-field">
+      <div class="label">完成时间</div>
+      <div class="value">${task.completedAt ? formatTime(task.completedAt) : '<span style="color:rgba(255,255,255,0.3)">未完成</span>'}</div>
+    </div>
+    <div class="detail-field">
+      <div class="label">取消时间</div>
+      <div class="value">${task.cancelledAt ? formatTime(task.cancelledAt) : '<span style="color:rgba(255,255,255,0.3)">未取消</span>'}</div>
     </div>
     <div class="detail-field">
       <div class="label">最后更新</div>
@@ -1488,50 +1589,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// Override confirmCancel for drag-drop case
-document.addEventListener('DOMContentLoaded', () => {
-  const origConfirm = doConfirmCancel;
-  window.doConfirmCancel = function() {
-    const reason = document.getElementById('cancelReasonInput').value.trim();
-    if (!reason) {
-      document.getElementById('cancelReasonInput').style.borderColor = '#ff6b6b';
-      document.getElementById('cancelReasonInput').placeholder = '请填写取消原因（必填）';
-      return;
-    }
-    if (pendingCancel) {
-      const task = tasks.find(t => t.id === pendingCancel.taskId);
-      if (task) {
-        task.cancelReason = reason;
-        if (pendingCancel.toStatus === 'cancelled') {
-          task.status = 'cancelled';
-          task.updatedAt = new Date().toISOString();
-          const sameStatus = tasks.filter(t => t.status === 'cancelled' && t.id !== task.id);
-          if (pendingCancel.toIndex !== undefined && pendingCancel.toIndex <= sameStatus.length) {
-            sameStatus.splice(pendingCancel.toIndex, 0, task);
-          } else {
-            sameStatus.push(task);
-          }
-          sameStatus.forEach((t, i) => t.order = i);
-        } else {
-          task.status = pendingCancel.toStatus;
-          task.updatedAt = new Date().toISOString();
-          const sameStatus = tasks.filter(t => t.status === pendingCancel.toStatus && t.id !== task.id);
-          if (pendingCancel.toIndex !== undefined && pendingCancel.toIndex <= sameStatus.length) {
-            sameStatus.splice(pendingCancel.toIndex, 0, task);
-          } else {
-            sameStatus.push(task);
-          }
-          sameStatus.forEach((t, i) => t.order = i);
-        }
-        saveToStorage();
-        renderAll();
-      }
-      pendingCancel = null;
-    }
-    closeModal('modalCancel');
-  };
-});
-
 // ============================================================
 //  MOVABLE TRASH ICON
 // ============================================================
@@ -1588,19 +1645,47 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================
 //  STATISTICS
 // ============================================================
-function renderStats() {
+// 统计口径：
+//  · 待处理 / 处理中 → 当前存量，忽略统计区间
+//  · 已完成 → 按「完成时间」落在区间内
+//  · 已取消 → 按「取消时间」落在区间内
+//  时间戳缺失时回落到 最后更新 → 创建时间
+function pickTime(task, field) {
+  return task[field] || task.updatedAt || task.createdAt || '';
+}
+function inRange(iso, start, end) {
+  if (!iso) return true;   // 无任何时间信息时，视为命中（避免漏统计）
+  const t = new Date(iso);
+  if (isNaN(t.getTime())) return true;
+  return t >= start && t <= end;
+}
+// 返回 { counts, list } —— list 为命中区间的任务（用于明细导出/AI 汇报）
+function computeStats() {
   const startVal = document.getElementById('statsStart').value;
   const endVal = document.getElementById('statsEnd').value;
-  if (!startVal || !endVal) return;
-  const start = new Date(startVal + 'T00:00:00+08:00');
-  const end = new Date(endVal + 'T23:59:59+08:00');
+  const start = startVal ? new Date(startVal + 'T00:00:00+08:00') : new Date(0);
+  const end = endVal ? new Date(endVal + 'T23:59:59+08:00') : new Date();
   const counts = { pending: 0, processing: 0, completed: 0, cancelled: 0 };
+  const list = [];
   tasks.forEach(t => {
-    const created = new Date(t.createdAt);
-    if (created >= start && created <= end) {
+    let hit = false;
+    if (t.status === 'pending' || t.status === 'processing') {
+      hit = true;                                   // 存量：始终计入
+    } else if (t.status === 'completed') {
+      hit = inRange(pickTime(t, 'completedAt'), start, end);
+    } else if (t.status === 'cancelled') {
+      hit = inRange(pickTime(t, 'cancelledAt'), start, end);
+    }
+    if (hit) {
       if (counts.hasOwnProperty(t.status)) counts[t.status]++;
+      list.push(t);
     }
   });
+  return { startVal, endVal, counts, list };
+}
+
+function renderStats() {
+  const { counts } = computeStats();
   const maxCount = Math.max(...Object.values(counts), 1);
   ['pending', 'processing', 'completed', 'cancelled'].forEach(s => {
     document.getElementById(`statsCount-${s}`).textContent = counts[s];
@@ -1617,35 +1702,33 @@ function csvCell(v) {
 }
 
 function exportStatsCSV() {
-  const startVal = document.getElementById('statsStart').value;
-  const endVal = document.getElementById('statsEnd').value;
-  const start = startVal ? new Date(startVal + 'T00:00:00+08:00') : new Date(0);
-  const end = endVal ? new Date(endVal + 'T23:59:59+08:00') : new Date();
-  const counts = { pending: 0, processing: 0, completed: 0, cancelled: 0 };
-  const details = [];
-  tasks.forEach(t => {
-    const created = new Date(t.createdAt);
-    if (created >= start && created <= end) {
-      if (counts.hasOwnProperty(t.status)) counts[t.status]++;
-      details.push({
-        id: t.id, title: t.title, description: t.description || '',
-        status: STATUS_LABELS[t.status],
-        source: t.source, createdAt: formatTime(t.createdAt),
-        cancelReason: t.cancelReason || ''
-      });
-    }
-  });
+  const { startVal, endVal, counts, list } = computeStats();
+  const details = list.map(t => ({
+    id: t.id,
+    title: t.title,
+    description: t.description || '',
+    status: STATUS_LABELS[t.status],
+    source: t.source,
+    createdAt: formatTime(t.createdAt),
+    startedAt: t.startedAt ? formatTime(t.startedAt) : '',
+    completedAt: t.completedAt ? formatTime(t.completedAt) : '',
+    cancelledAt: t.cancelledAt ? formatTime(t.cancelledAt) : '',
+    updatedAt: formatTime(t.updatedAt),
+    cancelReason: t.cancelReason || ''
+  }));
   let csv = '\uFEFF'; // BOM for Excel
-  csv += csvCell('统计时间段') + ',' + csvCell((startVal || '全部') + ' ~ ' + (endVal || '全部')) + '\n\n';
+  csv += csvCell('统计时间段') + ',' + csvCell((startVal || '全部') + ' ~ ' + (endVal || '全部')) + '\n';
+  csv += csvCell('统计口径') + ',' + csvCell('待处理/处理中=当前存量；已完成=按完成时间；已取消=按取消时间') + '\n\n';
   csv += csvCell('状态') + ',' + csvCell('数量') + '\n';
   csv += csvCell('待处理') + ',' + csvCell(counts.pending) + '\n';
   csv += csvCell('处理中') + ',' + csvCell(counts.processing) + '\n';
   csv += csvCell('已完成') + ',' + csvCell(counts.completed) + '\n';
   csv += csvCell('已取消') + ',' + csvCell(counts.cancelled) + '\n';
   csv += '\n' + csvCell('任务明细') + '\n';
-  csv += ['任务编号', '标题', '任务描述', '状态', '客户来源', '创建时间', '取消原因'].map(csvCell).join(',') + '\n';
+  csv += ['任务编号', '标题', '任务描述', '状态', '客户来源', '创建时间', '启动时间', '完成时间', '取消时间', '最后更新', '取消原因'].map(csvCell).join(',') + '\n';
   details.forEach(d => {
-    csv += [d.id, d.title, d.description, d.status, d.source, d.createdAt, d.cancelReason].map(csvCell).join(',') + '\n';
+    csv += [d.id, d.title, d.description, d.status, d.source, d.createdAt,
+            d.startedAt, d.completedAt, d.cancelledAt, d.updatedAt, d.cancelReason].map(csvCell).join(',') + '\n';
   });
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -1840,22 +1923,9 @@ async function clearAiKey() {
   }
 }
 
-// ---- 收集当前统计区间的任务数据 ----
+// ---- 收集当前统计区间的任务数据（口径与统计面板一致） ----
 function collectReportData() {
-  const startVal = document.getElementById('statsStart').value;
-  const endVal = document.getElementById('statsEnd').value;
-  const start = startVal ? new Date(startVal + 'T00:00:00+08:00') : new Date(0);
-  const end = endVal ? new Date(endVal + 'T23:59:59+08:00') : new Date();
-  const counts = { pending: 0, processing: 0, completed: 0, cancelled: 0 };
-  const list = [];
-  tasks.forEach(t => {
-    const created = new Date(t.createdAt);
-    if (created >= start && created <= end) {
-      if (counts.hasOwnProperty(t.status)) counts[t.status]++;
-      list.push(t);
-    }
-  });
-  return { startVal, endVal, counts, list };
+  return computeStats();
 }
 
 // ---- 点击「AI 整理汇报」：写入数据并在新标签页打开 report.html ----

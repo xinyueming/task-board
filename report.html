@@ -293,18 +293,37 @@ function addChatMsg(role, text) {
 function buildInitialPrompt(d) {
   const lines = [];
   lines.push('统计区间：' + (d.startVal || '全部') + ' ~ ' + (d.endVal || '全部'));
-  lines.push('状态汇总：待处理' + d.counts.pending + '，处理中' + d.counts.processing
-    + '，已完成' + d.counts.completed + '，已取消' + d.counts.cancelled + '（共' + d.list.length + '项）');
+  lines.push('统计口径说明：待处理、处理中为「当前存量」（不局限于统计区间）；'
+    + '已完成为「统计区间内完成」的任务；已取消为「统计区间内取消」的任务。撰写时请按此口径表述。');
+  lines.push('状态汇总：待处理' + d.counts.pending + '（当前存量），处理中' + d.counts.processing
+    + '（当前存量），已完成' + d.counts.completed + '（区间内完成），已取消' + d.counts.cancelled
+    + '（区间内取消）（共' + d.list.length + '项）');
   lines.push('');
-  lines.push('任务明细：');
+  lines.push('任务明细（含各阶段时间）：');
   d.list.forEach(t => {
     let s = '- ' + t.id + ' ' + t.title + ' [' + (STATUS_LABELS[t.status] || t.status) + ']';
     s += ' 来源:' + (t.source || '未指定');
     if (t.description) s += ' 描述:' + t.description;
+    if (t.createdAt) s += ' 创建:' + fmtShort(t.createdAt);
+    if (t.startedAt) s += ' 启动:' + fmtShort(t.startedAt);
+    if (t.completedAt) s += ' 完成:' + fmtShort(t.completedAt);
+    if (t.cancelledAt) s += ' 取消:' + fmtShort(t.cancelledAt);
     if (t.status === 'cancelled' && t.cancelReason) s += ' 取消原因:' + t.cancelReason;
     lines.push(s);
   });
   return lines.join('\n');
+}
+
+// 提示词里的短时间格式
+function fmtShort(iso) {
+  if (!iso) return '';
+  const dt = new Date(iso);
+  if (isNaN(dt.getTime())) return '';
+  const m = String(dt.getMonth() + 1).padStart(2, '0');
+  const day = String(dt.getDate()).padStart(2, '0');
+  const h = String(dt.getHours()).padStart(2, '0');
+  const mi = String(dt.getMinutes()).padStart(2, '0');
+  return `${m}-${day} ${h}:${mi}`;
 }
 
 // ---- 调用 DeepSeek（流式） ----
