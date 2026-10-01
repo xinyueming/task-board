@@ -785,6 +785,112 @@ html[data-theme="dark"] .ai-ic { background: rgba(139,92,246,0.22); color: #B49C
   .tabs { overflow-x: auto; }
 }
 
+
+/* ============================================================
+   阶段 3：任务详情 Drawer（右侧滑出，480px）
+   ============================================================ */
+.drawer-overlay {
+  position: fixed; inset: 0; z-index: 1500;
+  background: rgba(16,24,40,0.35);
+  opacity: 0; visibility: hidden; transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+.drawer-overlay.show { opacity: 1; visibility: visible; }
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 480px; max-width: 92vw;
+  z-index: 1600; display: flex; flex-direction: column;
+  background: var(--surface); border-left: 1px solid var(--bd);
+  box-shadow: -12px 0 40px rgba(16,24,40,0.16);
+  transform: translateX(100%); transition: transform 0.24s cubic-bezier(0.22,1,0.36,1);
+}
+.drawer.show { transform: translateX(0); }
+.drawer-head {
+  flex: none; display: flex; align-items: center; gap: 9px;
+  padding: 15px 18px; border-bottom: 1px solid var(--bd);
+}
+.drawer-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--text-3); }
+.drawer-head-title { font-size: 14px; font-weight: 650; color: var(--text); }
+.drawer-close {
+  margin-left: auto; width: 30px; height: 30px; border: none; border-radius: 8px;
+  background: transparent; color: var(--text-3); font-size: 20px; line-height: 1;
+  cursor: pointer; transition: all var(--t);
+}
+.drawer-close:hover { background: var(--hover); color: var(--text); }
+.drawer-body { flex: 1; overflow-y: auto; padding: 18px; }
+.drawer-foot {
+  flex: none; display: flex; gap: 8px; flex-wrap: wrap;
+  padding: 13px 18px; border-top: 1px solid var(--bd); background: var(--surface-2);
+}
+.drawer-foot button {
+  height: 36px; padding: 0 16px; border-radius: var(--r-ctl);
+  border: 1px solid var(--bd); background: var(--surface); color: var(--text-2);
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: all var(--t);
+}
+.drawer-foot button:hover { background: var(--hover); color: var(--text); }
+.drawer-foot .primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); font-weight: 600; }
+.drawer-foot .primary:hover { filter: brightness(1.07); }
+.drawer-foot .ok { border-color: var(--st-completed); color: var(--st-completed); }
+.drawer-foot .ok:hover { background: var(--ok-weak); }
+.drawer-foot .danger { margin-left: auto; border-color: transparent; color: var(--danger); }
+.drawer-foot .danger:hover { background: var(--danger-weak); }
+
+.dr-title-wrap { margin-bottom: 18px; }
+.dr-id { font-size: 11.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.dr-title { font-size: 17px; font-weight: 650; color: var(--text); line-height: 1.45; margin: 5px 0 9px; }
+.dr-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.dr-badge {
+  font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 6px;
+  background: var(--hover); color: var(--text-2);
+}
+.dr-badge.pending    { background: var(--primary-weak); color: var(--st-pending); }
+.dr-badge.processing { background: var(--warn-weak); color: var(--st-processing); }
+.dr-badge.completed  { background: var(--ok-weak); color: var(--st-completed); }
+.dr-badge.cancelled  { background: var(--hover); color: var(--st-cancelled); }
+.dr-badge.p0 { background: var(--danger-weak); color: var(--danger); }
+.dr-badge.p1 { background: var(--warn-weak); color: var(--st-processing); }
+
+.dr-sec { margin-bottom: 20px; }
+.dr-sec-title { font-size: 12px; font-weight: 650; color: var(--text-2); margin-bottom: 10px; letter-spacing: 0.3px; }
+.dr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px 16px; }
+.dr-item .k { font-size: 11px; color: var(--text-3); margin-bottom: 3px; }
+.dr-item .v { font-size: 13px; color: var(--text); line-height: 1.5; word-break: break-word; }
+.dr-item.full { grid-column: 1 / -1; }
+.dr-desc {
+  font-size: 13px; color: var(--text); line-height: 1.75;
+  background: var(--surface-2); border: 1px solid var(--bd-soft);
+  border-radius: var(--r-ctl); padding: 11px 13px; white-space: pre-wrap; word-break: break-word;
+}
+.dr-reason {
+  font-size: 13px; color: var(--danger); line-height: 1.6;
+  background: var(--danger-weak); border-radius: var(--r-ctl); padding: 10px 12px;
+}
+.dr-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.dr-tag { font-size: 11px; padding: 2px 9px; border-radius: 6px; background: var(--primary-weak); color: var(--primary); }
+
+.dr-log { position: relative; padding-left: 18px; }
+.dr-log::before {
+  content: ''; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 1px; background: var(--bd);
+}
+.dr-log-item { position: relative; margin-bottom: 14px; }
+.dr-log-item::before {
+  content: ''; position: absolute; left: -18px; top: 4px;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--surface); border: 2px solid var(--text-3);
+}
+.dr-log-item.done::before { border-color: var(--st-completed); }
+.dr-log-item.now::before { border-color: var(--primary); background: var(--primary); }
+.dr-log-when { font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.dr-log-what { font-size: 13px; color: var(--text); margin-top: 2px; }
+.dr-log-who { font-size: 11.5px; color: var(--text-3); margin-top: 1px; }
+
+.dr-empty {
+  font-size: 12.5px; color: var(--text-3); padding: 14px;
+  border: 1px dashed var(--bd); border-radius: var(--r-ctl); text-align: center;
+}
+@media (max-width: 640px) {
+  .drawer { width: 100%; max-width: 100%; }
+  .dr-grid { grid-template-columns: 1fr; }
+}
+
 </style>
 <!-- Supabase 客户端库（UMD 全局版，暴露 window.supabase） -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -1091,16 +1197,17 @@ html[data-theme="dark"] .ai-ic { background: rgba(139,92,246,0.22); color: #B49C
   </div>
 </div>
 
-<!-- ===== Modal: Task Detail ===== -->
-<div class="modal-overlay" id="modalDetail">
-  <div class="modal-card">
-    <h2 id="detailTitle">📄 任务详情</h2>
-    <div id="detailContent"></div>
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="closeModal('modalDetail')" style="flex:0 0 auto; padding: 10px 32px;">关闭</button>
-    </div>
+<!-- ===== 任务详情 Drawer（右侧滑出） ===== -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeTaskDrawer()"></div>
+<aside class="drawer" id="taskDrawer" aria-hidden="true">
+  <div class="drawer-head">
+    <span class="drawer-dot" id="drawerDot"></span>
+    <span class="drawer-head-title" id="drawerHeadTitle">任务详情</span>
+    <button class="drawer-close" id="drawerClose" title="关闭">×</button>
   </div>
-</div>
+  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-foot" id="drawerFoot"></div>
+</aside>
 
 <!-- ===== Modal: Cancel Reason ===== -->
 <div class="modal-overlay" id="modalCancel">
@@ -2075,6 +2182,9 @@ function doConfirmCancel() {
       sameStatus.forEach((t, i) => t.order = i);
       saveToStorage();
       renderAll();
+      // 抽屉打开时同步刷新，避免详情停留在旧状态
+      const _dw = document.getElementById('taskDrawer');
+      if (_dw && _dw.classList.contains('show')) showDetail(task.id);
     }
     pendingCancel = null;
   }
@@ -2084,62 +2194,176 @@ function doConfirmCancel() {
 // ============================================================
 //  DETAIL MODAL
 // ============================================================
+// ============================================================
+//  任务详情 Drawer
+// ============================================================
+// 由现有时间戳推导操作日志（真实数据，无需额外表）
+function buildActivityLog(task) {
+  const who = task.assignee || '—';
+  const items = [];
+  if (task.createdAt) items.push({ time: task.createdAt, who, what: '创建任务', kind: 'done' });
+  if (task.startedAt) items.push({ time: task.startedAt, who, what: '开始处理', kind: 'done' });
+  if (task.completedAt) items.push({ time: task.completedAt, who, what: '标记为已完成', kind: 'done' });
+  if (task.cancelledAt) items.push({
+    time: task.cancelledAt, who,
+    what: '取消任务' + (task.cancelReason ? '：' + task.cancelReason : ''),
+    kind: 'done'
+  });
+  items.sort((a, b) => new Date(a.time) - new Date(b.time));
+  // 最后一项标记为「当前节点」
+  if (items.length) items[items.length - 1].kind = 'now';
+  return items;
+}
+
 function showDetail(taskId) {
   const task = tasks.find(t => t.id === taskId);
   if (!task) return;
-  document.getElementById('detailTitle').textContent = '📄 任务详情';
-  const statusColor = {
-    pending: 'pending', processing: 'processing', completed: 'completed', cancelled: 'cancelled'
-  };
-  document.getElementById('detailContent').innerHTML = `
-    <div class="detail-field">
-      <div class="label">任务编号</div>
-      <div class="value">${task.id}</div>
+  const st = task.status;
+  const stLabel = STATUS_LABELS[st] || st;
+  const prio = task.priority || 'P2';
+  const prioCls = prio === 'P0' ? 'p0' : (prio === 'P1' ? 'p1' : '');
+  const dotColor = {
+    pending: 'var(--st-pending)', processing: 'var(--st-processing)',
+    completed: 'var(--st-completed)', cancelled: 'var(--st-cancelled)'
+  }[st] || 'var(--text-3)';
+
+  // 头部
+  const dot = document.getElementById('drawerDot');
+  if (dot) dot.style.background = dotColor;
+  const ht = document.getElementById('drawerHeadTitle');
+  if (ht) ht.textContent = '任务详情 · ' + stLabel;
+
+  const item = (k, v) => `<div class="dr-item"><div class="k">${escHtml(k)}</div><div class="v">${v}</div></div>`;
+  const dash = '<span style="color:var(--text-3)">—</span>';
+  const fmt = (t) => t ? escHtml(formatTime(t)) : dash;
+
+  // 基本信息
+  const basic = [
+    item('负责人', task.assignee ? escHtml(task.assignee) : dash),
+    item('所属部门', task.department ? escHtml(task.department) : dash),
+    item('客户来源', task.source ? escHtml(task.source) : dash),
+    item('优先级', `<span class="dr-badge ${prioCls}">${escHtml(prio)}</span>`),
+    item('截止时间', task.dueDate ? escHtml(fmtDue(task.dueDate)) + (isOverdue(task) ? ' <span style="color:var(--danger);font-size:11.5px">已超期</span>' : '') : dash),
+    item('已耗时', elapsedText(task) ? escHtml(elapsedText(task)) : dash)
+  ].join('');
+
+  // 时间线
+  const timeline = [
+    item('创建时间', fmt(task.createdAt)),
+    item('开始时间', fmt(task.startedAt)),
+    item('完成时间', fmt(task.completedAt)),
+    item('取消时间', fmt(task.cancelledAt)),
+    item('最后更新', fmt(task.updatedAt))
+  ].join('');
+
+  // 操作日志
+  const log = buildActivityLog(task);
+  const logHtml = log.length
+    ? `<div class="dr-log">${log.map(x => `
+        <div class="dr-log-item ${x.kind === 'now' ? 'now' : ''}">
+          <div class="dr-log-when">${escHtml(formatTime(x.time))}</div>
+          <div class="dr-log-what">${escHtml(x.what)}</div>
+          <div class="dr-log-who">${escHtml(x.who)}</div>
+        </div>`).join('')}</div>`
+    : '<div class="dr-empty">暂无操作记录</div>';
+
+  const body = `
+    <div class="dr-title-wrap">
+      <div class="dr-id">${escHtml(task.id)}</div>
+      <div class="dr-title">${escHtml(task.title)}</div>
+      <div class="dr-badges">
+        <span class="dr-badge ${st}">${escHtml(stLabel)}</span>
+        <span class="dr-badge ${prioCls}">${escHtml(prio)}</span>
+      </div>
     </div>
-    <div class="detail-field">
-      <div class="label">任务标题</div>
-      <div class="value" style="font-size:18px;font-weight:600;">${escHtml(task.title)}</div>
+
+    <div class="dr-sec">
+      <div class="dr-sec-title">基本信息</div>
+      <div class="dr-grid">${basic}</div>
     </div>
-    <div class="detail-field">
-      <div class="label">任务描述</div>
-      <div class="value">${escHtml(task.description) || '<span style="color:rgba(255,255,255,0.3)">暂无描述</span>'}</div>
+
+    <div class="dr-sec">
+      <div class="dr-sec-title">时间线</div>
+      <div class="dr-grid">${timeline}</div>
     </div>
-    <div class="detail-field">
-      <div class="label">客户来源</div>
-      <div class="value">${escHtml(task.source)}</div>
+
+    <div class="dr-sec">
+      <div class="dr-sec-title">任务描述</div>
+      ${task.description ? `<div class="dr-desc">${escHtml(task.description)}</div>` : '<div class="dr-empty">暂无描述</div>'}
     </div>
-    <div class="detail-field">
-      <div class="label">当前状态</div>
-      <div class="value"><span class="status-badge ${statusColor[task.status]}">${STATUS_LABELS[task.status]}</span></div>
-    </div>
-    <div class="detail-field">
-      <div class="label">创建时间</div>
-      <div class="value">${formatTime(task.createdAt)}</div>
-    </div>
-    <div class="detail-field">
-      <div class="label">启动时间</div>
-      <div class="value">${task.startedAt ? formatTime(task.startedAt) : '<span style="color:rgba(255,255,255,0.3)">未启动</span>'}</div>
-    </div>
-    <div class="detail-field">
-      <div class="label">完成时间</div>
-      <div class="value">${task.completedAt ? formatTime(task.completedAt) : '<span style="color:rgba(255,255,255,0.3)">未完成</span>'}</div>
-    </div>
-    <div class="detail-field">
-      <div class="label">取消时间</div>
-      <div class="value">${task.cancelledAt ? formatTime(task.cancelledAt) : '<span style="color:rgba(255,255,255,0.3)">未取消</span>'}</div>
-    </div>
-    <div class="detail-field">
-      <div class="label">最后更新</div>
-      <div class="value">${formatTime(task.updatedAt)}</div>
-    </div>
+
     ${task.cancelReason ? `
-    <div class="detail-field">
-      <div class="label">取消原因</div>
-      <div class="value reason">${escHtml(task.cancelReason)}</div>
+    <div class="dr-sec">
+      <div class="dr-sec-title">取消原因</div>
+      <div class="dr-reason">${escHtml(task.cancelReason)}</div>
     </div>` : ''}
+
+    ${(Array.isArray(task.tags) && task.tags.length) ? `
+    <div class="dr-sec">
+      <div class="dr-sec-title">任务标签</div>
+      <div class="dr-tags">${task.tags.map(t => `<span class="dr-tag">${escHtml(t)}</span>`).join('')}</div>
+    </div>` : ''}
+
+    <div class="dr-sec">
+      <div class="dr-sec-title">处理记录</div>
+      ${logHtml}
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-sec-title">附件与评论</div>
+      <div class="dr-empty">暂未启用（后续阶段实现）</div>
+    </div>
   `;
-  openModal('modalDetail');
+  document.getElementById('drawerBody').innerHTML = body;
+
+  // 底部操作
+  let foot = '';
+  if (st === 'pending') {
+    foot += `<button class="primary" onclick="drawerAction('start','${task.id}')">启动任务</button>`;
+    foot += `<button onclick="drawerAction('cancel','${task.id}')">取消任务</button>`;
+  } else if (st === 'processing') {
+    foot += `<button class="primary" onclick="drawerAction('complete','${task.id}')">完成任务</button>`;
+    foot += `<button onclick="drawerAction('cancel','${task.id}')">取消任务</button>`;
+  } else if (st === 'completed') {
+    foot += `<button class="ok" onclick="drawerAction('reopen','${task.id}')">重新打开</button>`;
+  } else if (st === 'cancelled') {
+    foot += `<button class="ok" onclick="drawerAction('restart','${task.id}')">重启任务</button>`;
+  }
+  foot += `<button class="danger" onclick="drawerAction('delete','${task.id}')">删除</button>`;
+  document.getElementById('drawerFoot').innerHTML = foot;
+
+  // 打开
+  document.getElementById('drawerOverlay').classList.add('show');
+  const dr = document.getElementById('taskDrawer');
+  dr.classList.add('show');
+  dr.setAttribute('aria-hidden', 'false');
 }
+
+function closeTaskDrawer() {
+  document.getElementById('drawerOverlay').classList.remove('show');
+  const dr = document.getElementById('taskDrawer');
+  if (dr) { dr.classList.remove('show'); dr.setAttribute('aria-hidden', 'true'); }
+}
+
+// Drawer 内的操作
+function drawerAction(kind, taskId) {
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+  if (kind === 'start') { updateTaskStatus(taskId, 'processing'); showDetail(taskId); }
+  else if (kind === 'complete') { updateTaskStatus(taskId, 'completed'); showDetail(taskId); }
+  else if (kind === 'reopen') { updateTaskStatus(taskId, 'processing'); showDetail(taskId); }
+  else if (kind === 'restart') { updateTaskStatus(taskId, 'processing'); showDetail(taskId); }
+  else if (kind === 'cancel') {
+    pendingCancel = { taskId, toStatus: 'cancelled' };
+    document.getElementById('cancelReasonInput').value = '';
+    openModal('modalCancel');
+  } else if (kind === 'delete') {
+    closeTaskDrawer();
+    actionDelete(taskId);
+  }
+}
+
+
 
 function formatTime(iso) {
   if (!iso) return '-';
@@ -3004,6 +3228,13 @@ function setupEventListeners() {
   ['statsStart', 'statsEnd'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', () => { clearQuickRangeActive(); renderStats(); });
+  });
+
+  // 任务详情 Drawer：关闭按钮 + Esc
+  const dClose = document.getElementById('drawerClose');
+  if (dClose) dClose.addEventListener('click', closeTaskDrawer);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeTaskDrawer();
   });
 
   const sac = document.getElementById('showAllCompleted');

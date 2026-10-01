@@ -5,422 +5,892 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>任务看板系统</title>
 <style>
+/* ============================================================
+   Design Tokens · 企业级 SaaS Dashboard
+   浅色为主（默认），深色主题同构派生
+   8px spacing system · 卡片圆角 10~14px · 控件圆角 8px · 轻阴影
+   ============================================================ */
+:root {
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 24px; --sp-6: 32px;
+  --r-ctl: 8px; --r-card: 12px; --r-lg: 14px;
+  --t: 0.15s ease;
+  --font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+/* 浅色（默认，规格配色） */
+html[data-theme="light"] {
+  --bg: #F5F7FB;
+  --surface: #FFFFFF;
+  --surface-2: #FAFBFD;
+  --card: #FFFFFF;
+  --card-hover: #FFFFFF;
+  --bd: #E5E7EB;
+  --bd-soft: #EEF1F5;
+  --text: #172033;
+  --text-2: #667085;
+  --text-3: #98A2B3;
+  --primary: #4F6BED;
+  --primary-weak: #EEF1FE;
+  --on-primary: #FFFFFF;
+  --field: #FFFFFF;
+  --field-bd: #E5E7EB;
+  --hover: #F2F4F8;
+  --shadow-sm: 0 1px 2px rgba(16,24,40,0.05);
+  --shadow: 0 2px 8px rgba(16,24,40,0.06);
+  --shadow-lg: 0 12px 32px rgba(16,24,40,0.12);
+  --st-pending: #4F6BED;
+  --st-processing: #E59A2F;
+  --st-completed: #35A66F;
+  --st-cancelled: #9AA4B2;
+  --danger: #E5484D;
+  --danger-weak: #FDECEC;
+  --ok-weak: #E8F6EF;
+  --warn-weak: #FEF4E6;
+  --scroll: #D6DBE3;
+}
+
+/* 深色（同构派生） */
+html[data-theme="dark"] {
+  --bg: #0E1116;
+  --surface: #14181F;
+  --surface-2: #171C24;
+  --card: #1A1F29;
+  --card-hover: #1F2530;
+  --bd: #262C38;
+  --bd-soft: #202632;
+  --text: #E7E9EE;
+  --text-2: #9BA3B0;
+  --text-3: #6C7684;
+  --primary: #7C93FF;
+  --primary-weak: rgba(124,147,255,0.14);
+  --on-primary: #0B0E13;
+  --field: #1A1F29;
+  --field-bd: #2A3140;
+  --hover: #212836;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow: 0 2px 10px rgba(0,0,0,0.34);
+  --shadow-lg: 0 14px 38px rgba(0,0,0,0.5);
+  --st-pending: #7C93FF;
+  --st-processing: #E0A549;
+  --st-completed: #48B87E;
+  --st-cancelled: #6C7684;
+  --danger: #E5767D;
+  --danger-weak: rgba(229,118,125,0.14);
+  --ok-weak: rgba(72,184,126,0.14);
+  --warn-weak: rgba(224,165,73,0.14);
+  --scroll: #333B4A;
+}
+
 /* ===== Reset & Base ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
-  background: linear-gradient(135deg, #0f0c29 0%, #1a1a3e 40%, #16213e 100%);
-  min-height: 100vh; color: #e0e0e0; overflow-x: hidden;
+  font-family: var(--font);
+  background: var(--bg);
+  min-height: 100vh; color: var(--text);
+  overflow-x: hidden; -webkit-font-smoothing: antialiased;
+  font-size: 14px; line-height: 1.5;
+  transition: background-color var(--t), color var(--t);
 }
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scroll); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+button, input, select, textarea { font-family: inherit; font-size: inherit; }
 
-/* ===== Login Page ===== */
+/* ===== 登录页 ===== */
 #loginPage {
   position: fixed; inset: 0; z-index: 1000;
   display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #0f0c29 0%, #1a1a3e 40%, #16213e 100%);
-  transition: opacity 0.5s ease, transform 0.5s ease;
+  background: var(--bg); transition: opacity 0.4s ease, transform 0.4s ease;
 }
-#loginPage.hidden { opacity: 0; transform: scale(1.05); pointer-events: none; }
+#loginPage.hidden { opacity: 0; transform: scale(1.02); pointer-events: none; }
 .login-card {
-  background: rgba(255,255,255,0.06); backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
-  padding: 48px 40px; width: 400px; max-width: 90vw;
-  box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+  background: var(--surface); border: 1px solid var(--bd);
+  border-radius: var(--r-lg); padding: 44px 40px; width: 400px; max-width: 90vw;
+  box-shadow: var(--shadow-lg);
 }
-.login-card .logo { text-align: center; margin-bottom: 32px; }
-.login-card .logo .icon { font-size: 48px; }
-.login-card .logo h1 { font-size: 24px; font-weight: 700; margin-top: 12px;
-  background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent; background-clip: text; }
-.form-group { margin-bottom: 20px; }
-.form-group label { display: block; font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 6px; }
-.form-group input {
-  width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.06); color: #fff; font-size: 15px; outline: none;
-  transition: border-color 0.3s, box-shadow 0.3s;
+.login-card .logo { text-align: center; margin-bottom: var(--sp-6); }
+.login-card .logo .icon { font-size: 40px; }
+.login-card .logo h1 { font-size: 22px; font-weight: 650; margin-top: var(--sp-3); color: var(--text); }
+.form-group { margin-bottom: var(--sp-4); }
+.form-group label { display: block; font-size: 12.5px; color: var(--text-2); margin-bottom: 7px; font-weight: 500; }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%; padding: 10px 12px; border-radius: var(--r-ctl);
+  border: 1px solid var(--field-bd); background: var(--field); color: var(--text);
+  font-size: 14px; outline: none; transition: border-color var(--t), box-shadow var(--t);
 }
-.form-group input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.2); }
-.form-group input::placeholder { color: rgba(255,255,255,0.25); }
+.form-group textarea { resize: vertical; min-height: 76px; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-weak);
+}
+.form-group input::placeholder, .form-group textarea::placeholder { color: var(--text-3); }
 .btn-primary {
-  width: 100%; padding: 12px; border: none; border-radius: 10px;
-  background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; font-size: 16px;
-  font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+  width: 100%; padding: 11px; border: none; border-radius: var(--r-ctl);
+  background: var(--primary); color: var(--on-primary); font-size: 14.5px;
+  font-weight: 600; cursor: pointer; transition: filter var(--t);
 }
-.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(102,126,234,0.4); }
-.btn-primary:active { transform: translateY(0); }
-.login-error { color: #ff6b6b; font-size: 13px; margin-top: 12px; text-align: center; display: none; }
+.btn-primary:hover { filter: brightness(1.07); }
+.login-error { color: var(--danger); font-size: 12.5px; margin-top: var(--sp-3); text-align: center; display: none; }
 .login-error.show { display: block; }
-.login-hint { text-align: center; margin-top: 16px; font-size: 12px; color: rgba(255,255,255,0.3); }
+.login-hint { text-align: center; margin-top: var(--sp-4); font-size: 12px; color: var(--text-3); }
+.login-hint a { color: var(--primary); text-decoration: none; font-weight: 500; }
 
-/* ===== Main Layout ===== */
-#mainApp {
-  display: none; flex-direction: column; min-height: 100vh;
-}
+/* ===== 布局 ===== */
+#mainApp { display: none; flex-direction: column; min-height: 100vh; }
 #mainApp.show { display: flex; }
 
-/* ===== Header ===== */
+/* ===== Header (64px) ===== */
 .header {
+  position: sticky; top: 0; z-index: 200;
+  height: 64px; flex: none;
+  display: flex; align-items: center; gap: var(--sp-4);
+  padding: 0 var(--sp-6); background: var(--surface);
+  border-bottom: 1px solid var(--bd);
+}
+.header-left { display: flex; align-items: center; gap: 10px; flex: none; }
+.header-left .icon { font-size: 20px; }
+.header-left h1 { font-size: 16px; font-weight: 650; color: var(--text); letter-spacing: 0.2px; }
+.header-center { flex: 1; display: flex; justify-content: center; }
+.header-right { display: flex; align-items: center; gap: var(--sp-2); flex: none; }
+
+/* 搜索框 */
+.search-box { position: relative; width: 340px; max-width: 100%; }
+.search-box svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--text-3); }
+.search-box input {
+  width: 100%; height: 38px; padding: 0 12px 0 34px;
+  border: 1px solid var(--field-bd); border-radius: var(--r-ctl);
+  background: var(--field); color: var(--text); font-size: 13.5px; outline: none;
+  transition: border-color var(--t), box-shadow var(--t);
+}
+.search-box input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-weak); }
+.search-box input::placeholder { color: var(--text-3); }
+
+/* 图标按钮 */
+.icon-btn {
+  width: 38px; height: 38px; flex: none; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--bd); border-radius: var(--r-ctl); background: var(--surface);
+  color: var(--text-2); font-size: 15px; cursor: pointer; transition: all var(--t);
+}
+.icon-btn:hover { background: var(--hover); color: var(--text); }
+.icon-btn.configured { border-color: var(--st-completed); color: var(--st-completed); }
+
+/* 文本按钮 */
+.btn-ghost {
+  height: 38px; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--bd); border-radius: var(--r-ctl); background: var(--surface);
+  color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; transition: all var(--t);
+}
+.btn-ghost:hover { background: var(--hover); color: var(--text); }
+
+/* 用户区 + 下拉 */
+.user-menu { position: relative; }
+.user-trigger {
+  height: 38px; padding: 0 10px 0 6px; display: inline-flex; align-items: center; gap: var(--sp-2);
+  border: 1px solid var(--bd); border-radius: var(--r-ctl); background: var(--surface);
+  cursor: pointer; transition: all var(--t); color: var(--text-2); font-size: 13px;
+}
+.user-trigger:hover { background: var(--hover); }
+.avatar {
+  width: 26px; height: 26px; border-radius: 50%; flex: none;
+  background: var(--primary); color: var(--on-primary);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11.5px; font-weight: 700;
+}
+.user-name { max-width: 168px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dropdown {
+  position: absolute; right: 0; top: calc(100% + 6px); min-width: 200px;
+  background: var(--surface); border: 1px solid var(--bd); border-radius: var(--r-card);
+  box-shadow: var(--shadow-lg); padding: 6px; display: none; z-index: 300;
+}
+.dropdown.show { display: block; }
+.dropdown-item {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 9px 11px; border: none; border-radius: var(--r-ctl); background: transparent;
+  color: var(--text-2); font-size: 13.5px; cursor: pointer; text-align: left; transition: background var(--t);
+}
+.dropdown-item:hover { background: var(--hover); color: var(--text); }
+.dropdown-item.danger { color: var(--danger); }
+.dropdown-item.danger:hover { background: var(--danger-weak); }
+.dropdown-sep { height: 1px; background: var(--bd-soft); margin: 5px 0; }
+.dropdown-head { padding: 9px 11px 7px; }
+.dropdown-head .em { font-size: 13px; font-weight: 600; color: var(--text); word-break: break-all; }
+.dropdown-head .sub { font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
+
+/* ===== 页面主体 ===== */
+.page { flex: 1; padding: var(--sp-5) var(--sp-6) var(--sp-5); }
+.page-head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 32px; background: rgba(255,255,255,0.04);
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: var(--sp-4); gap: var(--sp-4);
 }
-.header-left { display: flex; align-items: center; gap: 12px; }
-.header-left .icon { font-size: 28px; }
-.header-left h1 { font-size: 20px; font-weight: 700;
-  background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent; background-clip: text; }
-.header-right { display: flex; align-items: center; gap: 16px; }
-.header-user { font-size: 14px; color: rgba(255,255,255,0.6); }
-.btn-logout {
-  padding: 8px 20px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
-  background: transparent; color: rgba(255,255,255,0.7); font-size: 13px; cursor: pointer;
-  transition: all 0.2s;
+.page-head h2 { font-size: 20px; font-weight: 650; color: var(--text); }
+.btn-create {
+  height: 38px; padding: 0 16px; display: inline-flex; align-items: center; gap: 6px;
+  border: none; border-radius: var(--r-ctl); background: var(--primary); color: var(--on-primary);
+  font-size: 13.5px; font-weight: 600; cursor: pointer; transition: filter var(--t);
 }
-.btn-logout:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.3); }
+.btn-create:hover { filter: brightness(1.07); }
 
-/* ===== Kanban Board ===== */
-.kanban-wrapper { flex: 1; padding: 24px 32px 200px; overflow-x: auto; }
-.kanban-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; min-width: 900px; }
+/* ===== 筛选工具栏 ===== */
+.toolbar {
+  display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap;
+  margin-bottom: var(--sp-4);
+}
+.toolbar-search { position: relative; flex: 1; min-width: 220px; max-width: 320px; }
+.toolbar-search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--text-3); }
+.toolbar-search input {
+  width: 100%; height: 38px; padding: 0 12px 0 34px;
+  border: 1px solid var(--field-bd); border-radius: var(--r-ctl);
+  background: var(--field); color: var(--text); font-size: 13.5px; outline: none;
+}
+.toolbar-search input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-weak); }
+.filter-select {
+  height: 38px; padding: 0 30px 0 12px; border: 1px solid var(--field-bd);
+  border-radius: var(--r-ctl); background: var(--field); color: var(--text-2);
+  font-size: 13px; cursor: pointer; outline: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2398A2B3' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  transition: border-color var(--t);
+}
+.filter-select:hover { border-color: var(--text-3); }
+.filter-select:focus { border-color: var(--primary); }
+.toolbar-right { margin-left: auto; display: flex; align-items: center; gap: var(--sp-2); }
 
-/* ===== Column ===== */
-.column { display: flex; flex-direction: column; }
-.column-header {
-  display: flex; align-items: center; gap: 10px; padding: 14px 16px;
-  border-radius: 12px 12px 0 0; font-weight: 600; font-size: 15px;
+/* 分段控件（看板/列表） */
+.segmented {
+  display: inline-flex; padding: 3px; gap: 2px;
+  border: 1px solid var(--bd); border-radius: var(--r-ctl); background: var(--surface);
 }
-.column-header .count {
-  margin-left: auto; background: rgba(255,255,255,0.1); padding: 2px 10px;
-  border-radius: 12px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.7);
+.segmented button {
+  height: 30px; padding: 0 13px; border: none; border-radius: 6px; background: transparent;
+  color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px; transition: all var(--t);
 }
-.col-pending .column-header { background: linear-gradient(135deg, #4A90D9, #357ABD); }
-.col-processing .column-header { background: linear-gradient(135deg, #F5A623, #E0961A); }
-.col-completed .column-header { background: linear-gradient(135deg, #7ED321, #6BBF1E); }
-.col-cancelled .column-header { background: linear-gradient(135deg, #9B9B9B, #7A7A7A); }
+.segmented button:hover { color: var(--text); }
+.segmented button.active { background: var(--primary-weak); color: var(--primary); font-weight: 600; }
+
+/* ===== Kanban ===== */
+.kanban-wrapper { overflow-x: auto; }
+.kanban-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-4); min-width: 1040px; }
+.column { display: flex; flex-direction: column; min-width: 0; }
+.column-head {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: 0 2px var(--sp-3); margin-bottom: var(--sp-3);
+}
+.column-head .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--dot, var(--text-3)); }
+.column-head .name { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.column-head .count {
+  min-width: 22px; height: 20px; padding: 0 7px; border-radius: 10px;
+  background: var(--hover); color: var(--text-2);
+  font-size: 11.5px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+.column-head .more-link {
+  margin-left: auto; border: none; background: transparent; color: var(--text-3);
+  font-size: 12px; cursor: pointer; padding: 2px 4px; transition: color var(--t);
+}
+.column-head .more-link:hover { color: var(--primary); }
+.col-pending .column-head   { --dot: var(--st-pending); }
+.col-processing .column-head{ --dot: var(--st-processing); }
+.col-completed .column-head { --dot: var(--st-completed); }
+.col-cancelled .column-head { --dot: var(--st-cancelled); }
 
 .column-body {
-  flex: 1; min-height: 200px; padding: 12px; border-radius: 0 0 12px 12px;
-  background: rgba(255,255,255,0.03); border: 2px dashed transparent;
-  transition: background 0.3s, border-color 0.3s;
-  display: flex; flex-direction: column; gap: 10px;
+  flex: 1; min-height: 200px; padding: 2px; border-radius: var(--r-card);
+  border: 1px dashed transparent; display: flex; flex-direction: column; gap: var(--sp-2);
+  transition: background var(--t), border-color var(--t);
 }
-.column-body.drag-over { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.2); }
-.column-body.empty { justify-content: center; align-items: center; }
-.empty-hint { color: rgba(255,255,255,0.15); font-size: 13px; pointer-events: none; }
+.column-body.drag-over { background: var(--primary-weak); border-color: var(--primary); }
+.column-body.empty { justify-content: flex-start; }
 
-/* ===== Task Card ===== */
+/* 空状态 */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 42px 16px; border-radius: var(--r-card);
+  border: 1px dashed var(--bd); background: var(--surface-2);
+}
+.empty-state svg { width: 40px; height: 40px; color: var(--bd); margin-bottom: var(--sp-3); }
+.empty-state .t { font-size: 13.5px; font-weight: 600; color: var(--text-2); margin-bottom: 3px; }
+.empty-state .s { font-size: 12px; color: var(--text-3); }
+
+/* ===== 任务卡片 ===== */
 .task-card {
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 10px; padding: 14px 16px; cursor: grab;
-  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
-  user-select: none;
+  position: relative; background: var(--card);
+  border: 1px solid var(--bd); border-radius: var(--r-card);
+  padding: var(--sp-3) var(--sp-4) var(--sp-3) 18px;
+  cursor: grab; box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--t), transform var(--t), border-color var(--t), opacity var(--t);
 }
-.task-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.task-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  border-radius: var(--r-card) 0 0 var(--r-card); background: var(--bar, var(--text-3));
+}
+.task-card:hover { box-shadow: var(--shadow); border-color: var(--bd); transform: translateY(-1px); }
 .task-card:active { cursor: grabbing; }
-.task-card.dragging { opacity: 0.4; transform: scale(0.95); }
-.task-card.drag-indicator-top { border-top: 2px solid #667eea; }
-.task-card.drag-indicator-bottom { border-bottom: 2px solid #667eea; }
+.task-card.dragging { opacity: 0.45; transform: rotate(1deg); }
+.task-card.drag-indicator-top { border-top: 2px solid var(--primary); }
+.task-card.drag-indicator-bottom { border-bottom: 2px solid var(--primary); }
+.task-card[data-status="pending"]    { --bar: var(--st-pending); }
+.task-card[data-status="processing"] { --bar: var(--st-processing); }
+.task-card[data-status="completed"]  { --bar: var(--st-completed); }
+.task-card[data-status="cancelled"]  { --bar: var(--st-cancelled); }
 
-.task-id {
-  font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4);
-  letter-spacing: 0.5px; margin-bottom: 4px; cursor: pointer;
-  display: inline-block; padding: 1px 6px; border-radius: 4px;
-  background: rgba(255,255,255,0.05); transition: background 0.2s;
+.card-top { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: 7px; }
+.card-id { font-size: 11.5px; color: var(--text-3); font-weight: 500; font-variant-numeric: tabular-nums; cursor: pointer; }
+.card-id:hover { color: var(--text-2); }
+.card-top .spacer { flex: 1; }
+.prio {
+  font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 5px;
+  letter-spacing: 0.3px; background: var(--hover); color: var(--text-2);
 }
-.task-id:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); }
-.task-title {
-  font-size: 14px; font-weight: 500; margin-bottom: 4px; cursor: pointer;
-  line-height: 1.4; color: #e8e8e8; transition: color 0.2s;
+.prio.p0 { background: var(--danger-weak); color: var(--danger); }
+.prio.p1 { background: var(--warn-weak); color: var(--st-processing); }
+.card-status {
+  font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 5px;
 }
-.task-title:hover { color: #667eea; }
-.task-source { font-size: 12px; color: rgba(255,255,255,0.35); margin-bottom: 10px; }
-.task-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.card-status.pending    { background: var(--primary-weak); color: var(--st-pending); }
+.card-status.processing { background: var(--warn-weak); color: var(--st-processing); }
+.card-status.completed  { background: var(--ok-weak); color: var(--st-completed); }
+.card-status.cancelled  { background: var(--hover); color: var(--st-cancelled); }
+.card-menu-btn {
+  width: 24px; height: 24px; border: none; border-radius: 6px; background: transparent;
+  color: var(--text-3); font-size: 15px; line-height: 1; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; transition: all var(--t);
+}
+.card-menu-btn:hover { background: var(--hover); color: var(--text); }
+
+.card-title {
+  font-size: 15.5px; font-weight: 600; line-height: 1.45; color: var(--text);
+  margin-bottom: var(--sp-3); cursor: pointer; word-break: break-word;
+}
+.card-title:hover { color: var(--primary); }
+.card-meta { display: flex; flex-wrap: wrap; gap: 4px var(--sp-4); margin-bottom: 6px; }
+.card-meta .mi {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; color: var(--text-2); min-width: 0;
+}
+.card-meta .mi svg { width: 13px; height: 13px; flex: none; color: var(--text-3); }
+.card-meta .mi.overdue, .card-meta .mi.overdue svg { color: var(--danger); }
+.card-meta .mi .ell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+.card-when { display: flex; flex-wrap: wrap; gap: 4px var(--sp-4); }
+.card-when .mi { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-3); }
+.card-when .mi svg { width: 12px; height: 12px; flex: none; }
+.card-when .mi.done { color: var(--st-completed); }
+.card-when .mi.cancelled { color: var(--st-cancelled); }
+.card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.card-tags .tag {
+  font-size: 10.5px; padding: 1px 7px; border-radius: 5px;
+  background: var(--primary-weak); color: var(--primary);
+}
+
+/* 卡片操作（hover 显现） */
+.task-actions {
+  display: flex; gap: 6px; align-items: center; margin-top: 0;
+  max-height: 0; overflow: hidden; opacity: 0;
+  transition: opacity var(--t), max-height var(--t), margin-top var(--t);
+}
+.task-card:hover .task-actions, .task-card:focus-within .task-actions { opacity: 1; max-height: 44px; margin-top: var(--sp-3); }
 .task-actions button {
-  padding: 5px 14px; border: none; border-radius: 6px; font-size: 12px;
-  font-weight: 500; cursor: pointer; transition: all 0.2s;
+  padding: 5px 12px; border: 1px solid var(--bd); border-radius: 6px;
+  font-size: 11.5px; font-weight: 500; cursor: pointer; transition: all var(--t);
+  background: var(--surface); color: var(--text-2);
 }
-.btn-start { background: rgba(74,144,217,0.25); color: #6BA3E0; }
-.btn-start:hover { background: rgba(74,144,217,0.4); }
-.btn-complete { background: rgba(126,211,33,0.25); color: #8FE04A; }
-.btn-complete:hover { background: rgba(126,211,33,0.4); }
-.btn-cancel { background: rgba(155,155,155,0.2); color: #B0B0B0; }
-.btn-cancel:hover { background: rgba(155,155,155,0.35); }
-.btn-view-reason { background: rgba(155,155,155,0.15); color: #B0B0B0; }
-.btn-view-reason:hover { background: rgba(155,155,155,0.3); }
-.btn-delete {
-  background: rgba(255,77,77,0.15); color: #FF6B6B;
-  padding: 5px 10px; border: none; border-radius: 6px; font-size: 11px;
-  font-weight: 500; cursor: pointer; transition: all 0.2s;
-  opacity: 0.5; margin-left: auto;
-}
-.btn-delete:hover { background: rgba(255,77,77,0.3); opacity: 1; }
+.btn-start:hover    { border-color: var(--primary); color: var(--primary); background: var(--primary-weak); }
+.btn-complete:hover { border-color: var(--st-completed); color: var(--st-completed); background: var(--ok-weak); }
+.btn-cancel:hover   { border-color: var(--st-cancelled); color: var(--text); background: var(--hover); }
+.btn-view-reason:hover { border-color: var(--text-3); color: var(--text); }
+.btn-delete { margin-left: auto; }
+.btn-delete:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-weak); }
 
-/* ===== Trash / Recycle Bin ===== */
+/* 卡片下拉菜单 */
+.card-menu {
+  position: absolute; right: 10px; top: 34px; min-width: 148px; z-index: 120;
+  background: var(--surface); border: 1px solid var(--bd); border-radius: var(--r-card);
+  box-shadow: var(--shadow-lg); padding: 5px; display: none;
+}
+.card-menu.show { display: block; }
+
+/* ===== 回收站 ===== */
 .trash-container {
-  position: fixed; bottom: 220px; left: 24px; z-index: 90;
-  display: flex; flex-direction: column; align-items: flex-start;
-  user-select: none;
+  position: fixed; bottom: 208px; left: var(--sp-5); z-index: 90;
+  display: flex; flex-direction: column; align-items: flex-start; user-select: none;
 }
-.trash-container.dragging {
-  transition: none !important;
-}
+.trash-container.dragging { transition: none !important; }
 .trash-icon-wrap {
-  position: relative; cursor: grab;
-  width: 52px; height: 52px; border-radius: 50%;
-  background: rgba(25,25,50,0.85); backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.08);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px; transition: all 0.3s; user-select: none;
+  position: relative; cursor: grab; width: 44px; height: 44px; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--bd);
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+  transition: all var(--t); box-shadow: var(--shadow);
 }
-.trash-icon-wrap:hover { background: rgba(255,77,77,0.18); border-color: rgba(255,77,77,0.3); transform: scale(1.08); }
-.trash-icon-wrap.dragging {
-  opacity: 0.85;
-  transform: scale(1.15);
-}
-.trash-icon-wrap.drag-over { background: rgba(255,77,77,0.35); border-color: #FF6B6B; transform: scale(1.15); box-shadow: 0 0 24px rgba(255,77,77,0.35); }
+.trash-icon-wrap:hover { border-color: var(--text-3); transform: scale(1.05); }
+.trash-icon-wrap.dragging { opacity: 0.85; transform: scale(1.1); }
+.trash-icon-wrap.drag-over { background: var(--danger-weak); border-color: var(--danger); transform: scale(1.12); }
 .trash-icon-wrap:active, .trash-icon-wrap.grabbing { cursor: grabbing; }
 .trash-badge {
-  position: absolute; top: -3px; right: -3px; z-index: 2;
-  min-width: 18px; height: 18px; border-radius: 9px;
-  background: #FF6B6B; color: #fff; font-size: 11px; font-weight: 700;
-  display: none; align-items: center; justify-content: center;
-  padding: 0 4px; box-shadow: 0 0 6px rgba(255,77,77,0.4);
+  position: absolute; top: -3px; right: -3px; z-index: 2; min-width: 17px; height: 17px;
+  border-radius: 9px; background: var(--danger); color: #fff;
+  font-size: 10.5px; font-weight: 700; display: none; align-items: center; justify-content: center; padding: 0 4px;
 }
 .trash-panel {
-  position: absolute; left: 60px; top: 0;
-  width: 340px; max-height: 380px; overflow-y: auto;
-  background: rgba(22,22,45,0.96); backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.08); border-radius: 14px;
-  padding: 14px; box-shadow: 0 12px 40px rgba(0,0,0,0.5);
-  display: none; animation: fadeUp 0.25s ease;
+  position: absolute; left: 54px; top: 0; width: 330px; max-height: 360px; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--bd); border-radius: var(--r-lg);
+  padding: var(--sp-3); box-shadow: var(--shadow-lg); display: none; animation: fadeUp 0.18s ease;
 }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 .trash-panel-header {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 12px; padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: var(--sp-3); padding-bottom: 10px; border-bottom: 1px solid var(--bd-soft);
 }
-.trash-panel-title { font-size: 14px; font-weight: 600; color: #ccc; }
-.trash-panel-title span { color: #FF6B6B; }
+.trash-panel-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.trash-panel-title span { color: var(--danger); }
 .btn-trash-clear {
-  background: rgba(255,77,77,0.12); color: #FF6B6B; border: none;
-  padding: 4px 12px; border-radius: 6px; font-size: 11px; cursor: pointer;
-  transition: background 0.2s;
+  background: transparent; color: var(--text-3); border: 1px solid var(--bd);
+  padding: 4px 11px; border-radius: 6px; font-size: 11px; cursor: pointer; transition: all var(--t);
 }
-.btn-trash-clear:hover { background: rgba(255,77,77,0.25); }
-.trash-empty {
-  text-align: center; padding: 28px 0; color: rgba(255,255,255,0.25);
-  font-size: 13px;
-}
+.btn-trash-clear:hover { color: var(--danger); border-color: var(--danger); }
+.trash-empty { text-align: center; padding: var(--sp-5) 0; color: var(--text-3); font-size: 12.5px; }
 .trash-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px; margin-bottom: 6px;
-  background: rgba(255,255,255,0.03); border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.04);
-  transition: background 0.2s;
+  display: flex; align-items: center; gap: 10px; padding: 10px 11px; margin-bottom: 6px;
+  background: var(--surface-2); border: 1px solid var(--bd-soft); border-radius: var(--r-ctl);
+  transition: background var(--t);
 }
-.trash-item:hover { background: rgba(255,255,255,0.06); }
+.trash-item:hover { background: var(--hover); }
 .trash-item-info { flex: 1; min-width: 0; }
-.trash-item-id { font-size: 11px; color: #889; font-weight: 600; }
-.trash-item-title { font-size: 12px; color: #ccc; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.trash-item-time { font-size: 10px; color: rgba(255,255,255,0.25); margin-top: 2px; }
+.trash-item-id { font-size: 10.5px; color: var(--text-3); font-weight: 600; }
+.trash-item-title { font-size: 12.5px; color: var(--text); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trash-item-meta { font-size: 10px; color: var(--text-3); margin-top: 3px; }
 .btn-restore {
-  flex-shrink: 0; background: rgba(102,126,234,0.15); color: #8899ee;
-  border: none; padding: 5px 10px; border-radius: 6px; font-size: 11px;
-  cursor: pointer; transition: background 0.2s; font-weight: 500;
+  flex-shrink: 0; background: transparent; color: var(--primary); border: 1px solid var(--bd);
+  padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 500; transition: all var(--t);
 }
-.btn-restore:hover { background: rgba(102,126,234,0.3); }
-.trash-panel::-webkit-scrollbar { width: 4px; }
-.trash-panel::-webkit-scrollbar-track { background: transparent; }
-.trash-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.btn-restore:hover { border-color: var(--primary); background: var(--primary-weak); }
 
-/* ===== Floating New Task Button ===== */
+/* ===== 新建任务悬浮按钮（保留兼容） ===== */
 .btn-new-task {
-  position: fixed; bottom: 220px; right: 32px; z-index: 50;
-  width: 56px; height: 56px; border-radius: 50%; border: none;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: #fff; font-size: 28px; cursor: pointer;
-  box-shadow: 0 8px 30px rgba(102,126,234,0.4);
-  transition: transform 0.2s, box-shadow 0.2s;
-  display: flex; align-items: center; justify-content: center;
+  position: fixed; bottom: 208px; right: var(--sp-5); z-index: 50;
+  width: 48px; height: 48px; border-radius: 50%; border: none;
+  background: var(--primary); color: var(--on-primary); font-size: 22px; cursor: pointer;
+  box-shadow: var(--shadow); transition: filter var(--t), transform var(--t);
+  display: none; align-items: center; justify-content: center;
 }
-.btn-new-task:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 12px 40px rgba(102,126,234,0.5); }
-.btn-new-task:active { transform: scale(0.95); }
-.btn-new-task-label {
-  position: fixed; bottom: 234px; right: 96px; z-index: 50;
-  font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.6);
-  background: rgba(0,0,0,0.5); padding: 4px 14px; border-radius: 8px;
-  backdrop-filter: blur(8px); pointer-events: none;
-}
+.btn-new-task-label { display: none; }
 
-/* ===== Statistics Panel ===== */
+/* ===== 统计面板 ===== */
 .stats-panel {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
-  background: rgba(20,20,45,0.95); backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255,255,255,0.06);
-  padding: 20px 32px; max-height: 200px;
+  background: var(--surface); border-top: 1px solid var(--bd);
+  padding: var(--sp-3) var(--sp-6) var(--sp-4);
 }
-.stats-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-.stats-header h3 { font-size: 15px; font-weight: 600; }
-.stats-controls { display: flex; align-items: center; gap: 12px; }
-.stats-controls label { font-size: 12px; color: rgba(255,255,255,0.5); }
+.stats-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--sp-4); margin-bottom: 10px; flex-wrap: wrap;
+}
+.stats-header h3 { font-size: 13.5px; font-weight: 650; color: var(--text); white-space: nowrap; }
+.stats-controls { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.stats-controls label { font-size: 12px; color: var(--text-3); }
 .stats-controls input[type="date"] {
-  padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.06); color: #e0e0e0; font-size: 13px; outline: none;
-  color-scheme: dark;
+  height: 34px; padding: 0 10px; border-radius: var(--r-ctl); border: 1px solid var(--field-bd);
+  background: var(--field); color: var(--text); font-size: 12.5px; outline: none;
 }
-.stats-controls input[type="date"]:focus { border-color: #667eea; }
-.stats-query-btn {
-  padding: 6px 18px; border: none; border-radius: 6px;
-  background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;
-  font-size: 13px; font-weight: 500; cursor: pointer; transition: transform 0.2s;
-}
-.stats-query-btn:hover { transform: translateY(-1px); }
-.stats-export-btn {
-  padding: 6px 14px; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
-  background: transparent; color: rgba(255,255,255,0.6); font-size: 12px; cursor: pointer;
-  transition: all 0.2s;
-}
-.stats-export-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.3); }
-
-/* ===== Quick Range Buttons ===== */
-.quick-ranges { display: flex; align-items: center; gap: 6px; margin-right: 4px; }
+.stats-controls input[type="date"]:focus { border-color: var(--primary); }
+.quick-ranges { display: flex; align-items: center; gap: 2px; }
 .quick-range-btn {
-  padding: 6px 12px; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px;
-  background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.6);
-  font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap;
-  transition: all 0.2s;
+  height: 32px; padding: 0 11px; border: none; border-radius: var(--r-ctl);
+  background: transparent; color: var(--text-2); font-size: 12.5px; cursor: pointer;
+  transition: all var(--t); white-space: nowrap;
 }
-.quick-range-btn:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.25); }
-.quick-range-btn.active {
-  background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;
-  border-color: transparent; box-shadow: 0 4px 14px rgba(102,126,234,0.35);
+.quick-range-btn:hover { background: var(--hover); color: var(--text); }
+.quick-range-btn.active { background: var(--primary-weak); color: var(--primary); font-weight: 600; }
+.stats-query-btn, .btn-ai-report, .stats-export-btn {
+  height: 34px; padding: 0 14px; border-radius: var(--r-ctl); font-size: 12.5px; font-weight: 500;
+  cursor: pointer; transition: all var(--t); white-space: nowrap;
+  border: 1px solid var(--bd); background: var(--surface); color: var(--text-2);
 }
+.stats-query-btn:hover, .stats-export-btn:hover { background: var(--hover); color: var(--text); }
+.btn-ai-report { border-color: var(--primary); color: var(--primary); background: var(--primary-weak); }
+.btn-ai-report:hover { filter: brightness(0.98); }
+.btn-ai-report:disabled { opacity: 0.5; cursor: not-allowed; }
+.stats-scope-hint { font-size: 11.5px; color: var(--text-3); margin: 0 0 var(--sp-3); }
+.stats-body { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-5); }
+.stat-bar-group { display: flex; flex-direction: column; gap: 7px; }
+.stat-bar-count { font-size: 22px; font-weight: 650; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1; }
+.stat-bar-track { width: 100%; height: 3px; background: var(--bd-soft); border-radius: 2px; overflow: hidden; }
+.stat-bar-fill { width: 0%; height: 100%; border-radius: 2px; transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+.stat-bar-label { font-size: 12px; color: var(--text-3); }
+.bar-pending .stat-bar-fill   { background: var(--st-pending); }
+.bar-processing .stat-bar-fill{ background: var(--st-processing); }
+.bar-completed .stat-bar-fill { background: var(--st-completed); }
+.bar-cancelled .stat-bar-fill { background: var(--st-cancelled); }
 
-.stats-body { display: flex; align-items: flex-end; gap: 24px; height: 80px; }
-.stat-bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.stat-bar-track { width: 100%; height: 48px; background: rgba(255,255,255,0.04); border-radius: 6px; position: relative; overflow: hidden; }
-.stat-bar-fill {
-  position: absolute; bottom: 0; left: 0; width: 100%; height: 0%;
-  border-radius: 6px; transition: height 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.stat-bar-label { font-size: 12px; font-weight: 500; }
-.stat-bar-count { font-size: 13px; font-weight: 700; color: #fff; }
-.bar-pending .stat-bar-fill { background: linear-gradient(180deg, #4A90D9, #357ABD); }
-.bar-processing .stat-bar-fill { background: linear-gradient(180deg, #F5A623, #E0961A); }
-.bar-completed .stat-bar-fill { background: linear-gradient(180deg, #7ED321, #6BBF1E); }
-.bar-cancelled .stat-bar-fill { background: linear-gradient(180deg, #9B9B9B, #7A7A7A); }
-.bar-pending .stat-bar-label { color: #4A90D9; }
-.bar-processing .stat-bar-label { color: #F5A623; }
-.bar-completed .stat-bar-label { color: #7ED321; }
-.bar-cancelled .stat-bar-label { color: #9B9B9B; }
-
-/* ===== Modal Overlay ===== */
+/* ===== Modal / Drawer ===== */
 .modal-overlay {
-  position: fixed; inset: 0; z-index: 2000;
-  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
-  display: none; align-items: center; justify-content: center;
-  padding: 20px; animation: fadeIn 0.2s ease;
+  position: fixed; inset: 0; z-index: 2000; background: rgba(16,24,40,0.4);
+  display: none; align-items: center; justify-content: center; padding: var(--sp-5);
+  animation: fadeIn 0.16s ease;
 }
 .modal-overlay.show { display: flex; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
+@keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 .modal-card {
-  background: rgba(30,30,60,0.95); backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.1); border-radius: 16px;
-  padding: 32px; width: 480px; max-width: 100%; max-height: 90vh; overflow-y: auto;
-  box-shadow: 0 25px 60px rgba(0,0,0,0.6); animation: slideUp 0.25s ease;
+  background: var(--surface); border: 1px solid var(--bd); border-radius: var(--r-lg);
+  padding: var(--sp-5); width: 560px; max-width: 100%; max-height: 88vh; overflow-y: auto;
+  box-shadow: var(--shadow-lg); animation: slideUp 0.2s ease;
 }
-.modal-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 24px;
-  background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent; background-clip: text; }
-.modal-card .form-group textarea {
-  width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.06); color: #fff; font-size: 14px; outline: none;
-  resize: vertical; min-height: 80px; font-family: inherit;
-  transition: border-color 0.3s;
-}
-.modal-card .form-group textarea:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.2); }
-.modal-actions { display: flex; gap: 12px; margin-top: 24px; }
-.modal-actions .btn-primary { flex: 1; }
+.modal-card h2 { font-size: 17px; font-weight: 650; margin-bottom: var(--sp-4); color: var(--text); }
+.modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3) var(--sp-4); }
+.modal-grid .full { grid-column: 1 / -1; }
+.modal-actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-5); justify-content: flex-end; }
+.modal-actions .btn-primary { width: auto; padding: 10px 22px; }
 .btn-secondary {
-  flex: 1; padding: 12px; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
-  background: transparent; color: rgba(255,255,255,0.7); font-size: 15px; font-weight: 500;
-  cursor: pointer; transition: all 0.2s;
+  padding: 10px 20px; border: 1px solid var(--bd); border-radius: var(--r-ctl);
+  background: var(--surface); color: var(--text-2); font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: all var(--t);
 }
-.btn-secondary:hover { background: rgba(255,255,255,0.06); }
-.detail-field { margin-bottom: 16px; }
-.detail-field .label { font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 4px; }
-.detail-field .value { font-size: 14px; color: #e8e8e8; line-height: 1.5; }
-.detail-field .value.reason { color: #ff6b6b; padding: 8px 12px; background: rgba(255,107,107,0.08); border-radius: 8px; }
-.status-badge {
-  display: inline-block; padding: 2px 12px; border-radius: 12px; font-size: 12px; font-weight: 500;
-}
-.status-badge.pending { background: rgba(74,144,217,0.2); color: #4A90D9; }
-.status-badge.processing { background: rgba(245,166,35,0.2); color: #F5A623; }
-.status-badge.completed { background: rgba(126,211,33,0.2); color: #7ED321; }
-.status-badge.cancelled { background: rgba(155,155,155,0.2); color: #9B9B9B; }
+.btn-secondary:hover { background: var(--hover); color: var(--text); }
+.detail-field { margin-bottom: var(--sp-3); }
+.detail-field .label { font-size: 11.5px; color: var(--text-3); margin-bottom: 4px; }
+.detail-field .value { font-size: 13.5px; color: var(--text); line-height: 1.6; }
+.detail-field .value.reason { color: var(--danger); padding: 9px 12px; background: var(--danger-weak); border-radius: var(--r-ctl); }
+.status-badge { display: inline-block; padding: 2px 10px; border-radius: 11px; font-size: 11.5px; font-weight: 600; }
+.status-badge.pending    { background: var(--primary-weak); color: var(--st-pending); }
+.status-badge.processing { background: var(--warn-weak); color: var(--st-processing); }
+.status-badge.completed  { background: var(--ok-weak); color: var(--st-completed); }
+.status-badge.cancelled  { background: var(--hover); color: var(--st-cancelled); }
 
-/* ===== Responsive ===== */
-@media (max-width: 1100px) {
-  .kanban-board { grid-template-columns: repeat(2, 1fr); }
-  .kanban-wrapper { padding: 16px 16px 200px; }
-}
-@media (max-width: 640px) {
-  .kanban-board { grid-template-columns: 1fr; min-width: 0; }
-  .header { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
-  .header-left h1 { font-size: 16px; }
-  .stats-panel { padding: 16px; }
-  .stats-body { height: 60px; gap: 12px; }
-  .modal-card { padding: 24px 20px; }
-  .btn-new-task { bottom: 170px; right: 20px; width: 48px; height: 48px; font-size: 24px; }
-  .btn-new-task-label { display: none; }
-/* ===== AI Feature ===== */
-/* 顶部 AI 设置按钮 */
-.btn-ai-settings {
-  padding: 8px 16px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
-  background: transparent; color: rgba(255,255,255,0.7); font-size: 13px; cursor: pointer;
-  transition: all 0.2s;
-}
-.btn-ai-settings:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.3); }
-.btn-ai-settings.configured { border-color: rgba(126,211,33,0.4); color: #8FE04A; }
-
-/* 「AI 整理汇报」按钮 */
-.btn-ai-report {
-  padding: 6px 16px; border: none; border-radius: 6px;
-  background: linear-gradient(135deg, #7c3aed, #db2777); color: #fff;
-  font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-.btn-ai-report:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(124,58,237,0.4); }
-.btn-ai-report:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-/* AI 汇报页样式已在独立页面 report.html 中定义 */
-
-/* AI 设置弹窗 */
-.ai-field-hint { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 6px; line-height: 1.6; }
-.ai-status { font-size: 13px; margin-top: 12px; padding: 10px 14px; border-radius: 8px; display: none; }
+/* ===== AI 设置 ===== */
+.ai-field-hint { font-size: 11.5px; color: var(--text-3); margin-top: 6px; line-height: 1.6; }
+.ai-status { font-size: 12.5px; margin-top: var(--sp-3); padding: 10px 13px; border-radius: var(--r-ctl); display: none; }
 .ai-status.show { display: block; }
-.ai-status.ok { background: rgba(126,211,33,0.12); color: #8FE04A; border: 1px solid rgba(126,211,33,0.3); }
-.ai-status.err { background: rgba(255,107,107,0.1); color: #ff8080; border: 1px solid rgba(255,107,107,0.3); }
-.ai-status.info { background: rgba(102,126,234,0.12); color: #9aa8f0; border: 1px solid rgba(102,126,234,0.3); }
-.ai-key-row { display: flex; gap: 10px; }
+.ai-status.ok { background: var(--ok-weak); color: var(--st-completed); }
+.ai-status.err { background: var(--danger-weak); color: var(--danger); }
+.ai-status.info { background: var(--primary-weak); color: var(--primary); }
+.ai-key-row { display: flex; gap: var(--sp-2); }
 .ai-key-row input { flex: 1; }
 .btn-ai-test {
-  padding: 12px 18px; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
-  background: rgba(255,255,255,0.05); color: #e0e0e0; font-size: 13px; cursor: pointer;
-  white-space: nowrap; transition: all 0.2s;
+  padding: 10px 16px; border: 1px solid var(--bd); border-radius: var(--r-ctl);
+  background: var(--surface); color: var(--text-2); font-size: 12.5px; cursor: pointer;
+  white-space: nowrap; transition: all var(--t);
 }
-.btn-ai-test:hover { background: rgba(255,255,255,0.1); }
+.btn-ai-test:hover { background: var(--hover); color: var(--text); }
 .btn-ai-test:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ===== 响应式 ===== */
+@media (max-width: 1440px) {
+  .search-box { width: 260px; }
+}
+@media (max-width: 1280px) {
+  .page { padding: var(--sp-4); }
+  .stats-panel { padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+  .stats-body { gap: var(--sp-4); }
+  .header { padding: 0 var(--sp-4); }
+  .search-box { width: 200px; }
+}
+@media (max-width: 900px) {
+  .header-center { display: none; }
+  .kanban-board { min-width: 0; grid-template-columns: 1fr; }
+  .kanban-wrapper { overflow-x: visible; }
+  .stats-body { grid-template-columns: repeat(2, 1fr); }
+  .stats-scope-hint { display: none; }
+  .modal-grid { grid-template-columns: 1fr; }
+}
+
+
+/* ============================================================
+   阶段 2：任务统计与分析
+   三栏并排 · 等高 · 固定屏幕底部（不随页面滚动）· 自适应视口
+   ============================================================ */
+.stats-section {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 0.72fr);
+  gap: var(--sp-3);
+  align-items: stretch;              /* 三栏等高 */
+  padding: 10px var(--sp-6) 12px;
+  background: var(--surface);
+  border-top: 1px solid var(--bd);
+  box-shadow: 0 -2px 12px rgba(16,24,40,0.05);
+}
+html[data-theme="dark"] .stats-section { box-shadow: 0 -2px 12px rgba(0,0,0,0.3); }
+
+.panel {
+  display: flex; flex-direction: column; min-width: 0; min-height: 0;
+  background: var(--surface); border: 1px solid var(--bd);
+  border-radius: var(--r-card); padding: 10px 12px 12px;
+  box-shadow: var(--shadow-sm);
+}
+.panel-head {
+  display: flex; align-items: center; gap: 7px;
+  margin-bottom: 10px; flex-wrap: nowrap; flex: none;
+}
+.panel-ic { font-size: 14px; flex: none; }
+.panel-title { font-size: 13px; font-weight: 650; color: var(--text); white-space: nowrap; flex: none; }
+.info-dot {
+  width: 14px; height: 14px; border-radius: 50%; flex: none;
+  border: 1px solid var(--text-3); color: var(--text-3);
+  font-size: 9.5px; font-style: italic; font-weight: 700; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center; cursor: help;
+}
+.panel-head-right { margin-left: auto; display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+/* 周期 Tab（下划线样式） */
+.tabs { display: flex; align-items: center; gap: 1px; }
+.tab {
+  padding: 4px 8px 6px; border: none; background: transparent;
+  color: var(--text-2); font-size: 12px; font-weight: 500; cursor: pointer;
+  border-bottom: 2px solid transparent; transition: color var(--t), border-color var(--t);
+  white-space: nowrap;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+/* 日期范围（合并为一个控件） */
+.date-range {
+  display: inline-flex; align-items: center; gap: 5px; flex: none;
+  height: 30px; padding: 0 9px;
+  border: 1px solid var(--field-bd); border-radius: var(--r-ctl); background: var(--field);
+}
+.date-range > svg:first-child { width: 13px; height: 13px; color: var(--text-3); flex: none; }
+.date-range .tilde { color: var(--text-3); font-size: 11.5px; }
+.date-range input[type="date"] {
+  border: none; background: transparent; color: var(--text);
+  font-size: 12px; outline: none; width: 96px; padding: 0;
+  font-variant-numeric: tabular-nums;
+}
+.date-range input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
+.date-range .chev-dn { width: 11px; height: 11px; color: var(--text-3); flex: none; }
+
+/* 迷你下拉 */
+.mini-select {
+  margin-left: auto; flex: none; height: 28px; padding: 0 24px 0 9px;
+  border: 1px solid var(--field-bd); border-radius: var(--r-ctl); background: var(--field);
+  color: var(--text-2); font-size: 12px; cursor: pointer; outline: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2398A2B3' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center;
+}
+.mini-select:hover { border-color: var(--text-3); }
+
+/* KPI：4 × 2，紧凑，各自专属配色 */
+.kpi-grid {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.kpi {
+  display: flex; flex-direction: column; justify-content: center;
+  border: 1px solid var(--bd); border-radius: 10px;
+  padding: 8px 10px; background: var(--surface); min-width: 0;
+  transition: border-color var(--t), box-shadow var(--t);
+}
+.kpi:hover { border-color: var(--bd-soft); box-shadow: var(--shadow-sm); }
+.kpi-top { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+.kpi-ic {
+  width: 22px; height: 22px; border-radius: 6px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--kpi-bg, var(--primary-weak)); color: var(--kpi-fg, var(--primary));
+}
+.kpi-ic svg { width: 12px; height: 12px; }
+.kpi-label {
+  font-size: 11.5px; color: var(--text-2); font-weight: 500;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.kpi-val {
+  font-size: 20px; font-weight: 700; color: var(--text);
+  line-height: 1.05; font-variant-numeric: tabular-nums; margin-bottom: 3px;
+}
+.kpi-val .unit { font-size: 12px; font-weight: 600; margin-left: 1px; color: var(--text-2); }
+.kpi-delta { font-size: 10.5px; color: var(--text-3); display: flex; align-items: center; gap: 3px; white-space: nowrap; }
+.kpi-delta .up { color: var(--st-completed); font-weight: 700; }
+.kpi-delta .down { color: var(--danger); font-weight: 700; }
+.kpi-delta .flat { color: var(--text-3); font-weight: 700; }
+
+/* 各 KPI 配色 */
+.t-blue   { --kpi-bg: rgba(79,107,237,0.11);  --kpi-fg: #4F6BED; }
+.t-indigo { --kpi-bg: rgba(99,102,241,0.11);  --kpi-fg: #6366F1; }
+.t-green  { --kpi-bg: rgba(53,166,111,0.12);  --kpi-fg: #35A66F; }
+.t-gray   { --kpi-bg: rgba(154,164,178,0.15); --kpi-fg: #8593A3; }
+.t-sky    { --kpi-bg: rgba(14,165,233,0.11);  --kpi-fg: #0EA5E9; }
+.t-purple { --kpi-bg: rgba(139,92,246,0.11);  --kpi-fg: #8B5CF6; }
+.t-red    { --kpi-bg: rgba(229,72,77,0.10);   --kpi-fg: #E5484D; }
+.t-pink   { --kpi-bg: rgba(236,72,153,0.10);  --kpi-fg: #EC4899; }
+
+/* 趋势图：填满中间栏 */
+.chart-legend {
+  display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+  margin-bottom: 2px; flex: none;
+}
+.chart-legend .lg { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-2); }
+.chart-legend .lg i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.chart-wrap { position: relative; flex: 1; min-height: 90px; }
+.trend-chart { display: block; width: 100%; height: 100%; overflow: visible; }
+.chart-tip {
+  position: absolute; pointer-events: none; display: none; z-index: 5;
+  background: var(--text); color: var(--surface); font-size: 11px; line-height: 1.55;
+  padding: 6px 9px; border-radius: 6px; box-shadow: var(--shadow-lg); white-space: nowrap;
+}
+.chart-tip.show { display: block; }
+
+/* 右侧：AI 卡 + 快捷入口（等高填充） */
+.ai-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; }
+.ai-card {
+  display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
+  padding: 10px 11px; flex: none;
+  background: #F4F1FE; border: 1px solid #E6E0FB; border-radius: var(--r-card);
+  cursor: pointer; transition: filter var(--t);
+}
+html[data-theme="dark"] .ai-card { background: rgba(139,92,246,0.13); border-color: rgba(139,92,246,0.28); }
+.ai-card:hover { filter: brightness(0.985); }
+.ai-ic {
+  width: 26px; height: 26px; border-radius: 50%; flex: none;
+  background: #E9E3FD; color: #7C5CF5;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 13px;
+}
+html[data-theme="dark"] .ai-ic { background: rgba(139,92,246,0.22); color: #B49CFF; }
+.ai-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ai-txt b { font-size: 12.5px; font-weight: 650; color: var(--text); }
+.ai-txt small {
+  font-size: 10.5px; color: var(--text-2); line-height: 1.35;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.chev { flex: none; color: var(--text-3); font-size: 14px; }
+
+.link-card {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  padding: 9px 11px; flex: 1;                       /* 撑满剩余高度，保持三栏等高 */
+  background: var(--surface); border: 1px solid var(--bd); border-radius: var(--r-card);
+  color: var(--text-2); font-size: 12.5px; font-weight: 500; cursor: pointer;
+  transition: background var(--t), border-color var(--t), color var(--t); min-height: 0;
+}
+.link-card:hover { background: var(--hover); color: var(--text); }
+.link-card .ic { flex: none; width: 15px; text-align: center; color: var(--text-3); font-size: 12px; }
+.link-card .chev { margin-left: auto; }
+
+/* 低矮屏幕：进一步压缩，保证不挤压主区 */
+@media (max-height: 820px) {
+  .kpi-val { font-size: 18px; }
+  .kpi-ic { width: 20px; height: 20px; }
+  .kpi-label { font-size: 11px; }
+  .kpi { padding: 6px 9px; }
+  .chart-legend { display: none; }
+  .panel { padding: 8px 10px 10px; }
+}
+@media (max-width: 1500px) {
+  .stats-section { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 0.8fr); }
+}
+@media (max-width: 1100px) {
+  .stats-section { grid-template-columns: 1fr; position: static; }
+  .kpi-grid { grid-template-rows: auto; }
+  .kpi { min-height: 92px; }
+  .panel-head-right { margin-left: 0; }
+  .tabs { overflow-x: auto; }
+}
+
+
+/* ============================================================
+   阶段 3：任务详情 Drawer（右侧滑出，480px）
+   ============================================================ */
+.drawer-overlay {
+  position: fixed; inset: 0; z-index: 1500;
+  background: rgba(16,24,40,0.35);
+  opacity: 0; visibility: hidden; transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+.drawer-overlay.show { opacity: 1; visibility: visible; }
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 480px; max-width: 92vw;
+  z-index: 1600; display: flex; flex-direction: column;
+  background: var(--surface); border-left: 1px solid var(--bd);
+  box-shadow: -12px 0 40px rgba(16,24,40,0.16);
+  transform: translateX(100%); transition: transform 0.24s cubic-bezier(0.22,1,0.36,1);
+}
+.drawer.show { transform: translateX(0); }
+.drawer-head {
+  flex: none; display: flex; align-items: center; gap: 9px;
+  padding: 15px 18px; border-bottom: 1px solid var(--bd);
+}
+.drawer-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--text-3); }
+.drawer-head-title { font-size: 14px; font-weight: 650; color: var(--text); }
+.drawer-close {
+  margin-left: auto; width: 30px; height: 30px; border: none; border-radius: 8px;
+  background: transparent; color: var(--text-3); font-size: 20px; line-height: 1;
+  cursor: pointer; transition: all var(--t);
+}
+.drawer-close:hover { background: var(--hover); color: var(--text); }
+.drawer-body { flex: 1; overflow-y: auto; padding: 18px; }
+.drawer-foot {
+  flex: none; display: flex; gap: 8px; flex-wrap: wrap;
+  padding: 13px 18px; border-top: 1px solid var(--bd); background: var(--surface-2);
+}
+.drawer-foot button {
+  height: 36px; padding: 0 16px; border-radius: var(--r-ctl);
+  border: 1px solid var(--bd); background: var(--surface); color: var(--text-2);
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: all var(--t);
+}
+.drawer-foot button:hover { background: var(--hover); color: var(--text); }
+.drawer-foot .primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); font-weight: 600; }
+.drawer-foot .primary:hover { filter: brightness(1.07); }
+.drawer-foot .ok { border-color: var(--st-completed); color: var(--st-completed); }
+.drawer-foot .ok:hover { background: var(--ok-weak); }
+.drawer-foot .danger { margin-left: auto; border-color: transparent; color: var(--danger); }
+.drawer-foot .danger:hover { background: var(--danger-weak); }
+
+.dr-title-wrap { margin-bottom: 18px; }
+.dr-id { font-size: 11.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.dr-title { font-size: 17px; font-weight: 650; color: var(--text); line-height: 1.45; margin: 5px 0 9px; }
+.dr-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.dr-badge {
+  font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 6px;
+  background: var(--hover); color: var(--text-2);
+}
+.dr-badge.pending    { background: var(--primary-weak); color: var(--st-pending); }
+.dr-badge.processing { background: var(--warn-weak); color: var(--st-processing); }
+.dr-badge.completed  { background: var(--ok-weak); color: var(--st-completed); }
+.dr-badge.cancelled  { background: var(--hover); color: var(--st-cancelled); }
+.dr-badge.p0 { background: var(--danger-weak); color: var(--danger); }
+.dr-badge.p1 { background: var(--warn-weak); color: var(--st-processing); }
+
+.dr-sec { margin-bottom: 20px; }
+.dr-sec-title { font-size: 12px; font-weight: 650; color: var(--text-2); margin-bottom: 10px; letter-spacing: 0.3px; }
+.dr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px 16px; }
+.dr-item .k { font-size: 11px; color: var(--text-3); margin-bottom: 3px; }
+.dr-item .v { font-size: 13px; color: var(--text); line-height: 1.5; word-break: break-word; }
+.dr-item.full { grid-column: 1 / -1; }
+.dr-desc {
+  font-size: 13px; color: var(--text); line-height: 1.75;
+  background: var(--surface-2); border: 1px solid var(--bd-soft);
+  border-radius: var(--r-ctl); padding: 11px 13px; white-space: pre-wrap; word-break: break-word;
+}
+.dr-reason {
+  font-size: 13px; color: var(--danger); line-height: 1.6;
+  background: var(--danger-weak); border-radius: var(--r-ctl); padding: 10px 12px;
+}
+.dr-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.dr-tag { font-size: 11px; padding: 2px 9px; border-radius: 6px; background: var(--primary-weak); color: var(--primary); }
+
+.dr-log { position: relative; padding-left: 18px; }
+.dr-log::before {
+  content: ''; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 1px; background: var(--bd);
+}
+.dr-log-item { position: relative; margin-bottom: 14px; }
+.dr-log-item::before {
+  content: ''; position: absolute; left: -18px; top: 4px;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--surface); border: 2px solid var(--text-3);
+}
+.dr-log-item.done::before { border-color: var(--st-completed); }
+.dr-log-item.now::before { border-color: var(--primary); background: var(--primary); }
+.dr-log-when { font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.dr-log-what { font-size: 13px; color: var(--text); margin-top: 2px; }
+.dr-log-who { font-size: 11.5px; color: var(--text-3); margin-top: 1px; }
+
+.dr-empty {
+  font-size: 12.5px; color: var(--text-3); padding: 14px;
+  border: 1px dashed var(--bd); border-radius: var(--r-ctl); text-align: center;
+}
+@media (max-width: 640px) {
+  .drawer { width: 100%; max-width: 100%; }
+  .dr-grid { grid-template-columns: 1fr; }
+}
+
 </style>
 <!-- Supabase 客户端库（UMD 全局版，暴露 window.supabase） -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -470,113 +940,203 @@ body {
 
 <!-- ===== Main App ===== -->
 <div id="mainApp">
-  <!-- Header -->
+  <!-- Header (64px) -->
   <header class="header">
     <div class="header-left">
       <span class="icon">📋</span>
       <h1>任务看板系统</h1>
     </div>
+    <div class="header-center">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" id="globalSearch" placeholder="搜索任务名称 / TASK-ID / 关键词...">
+      </div>
+    </div>
     <div class="header-right">
-      <span class="header-user" id="headerUser">👤 admin</span>
-      <button class="btn-ai-settings" id="aiSettingsBtn" title="配置 DeepSeek API Key">⚙️ AI 设置</button>
-      <button class="btn-logout" id="logoutBtn">退出登录</button>
+      <button class="icon-btn" id="aiSettingsBtn" title="AI 设置">⚙</button>
+      <button class="icon-btn" id="themeToggleBtn" title="切换主题">🌙</button>
+      <div class="user-menu">
+        <button class="user-trigger" id="userTrigger">
+          <span class="avatar" id="userAvatar">U</span>
+          <span class="user-name" id="headerUser">-</span>
+          <span style="font-size:10px;color:var(--text-3)">▼</span>
+        </button>
+        <div class="dropdown" id="userDropdown">
+          <div class="dropdown-head">
+            <div class="em" id="ddEmail">-</div>
+            <div class="sub">已登录 · 任务看板系统</div>
+          </div>
+          <div class="dropdown-sep"></div>
+          <button class="dropdown-item" id="ddAiSettings">⚙　AI 设置</button>
+          <button class="dropdown-item" id="ddTheme">🌓　切换主题</button>
+          <button class="dropdown-item" id="ddExport">⬇　导出 CSV</button>
+          <div class="dropdown-sep"></div>
+          <button class="dropdown-item danger" id="logoutBtn">退出登录</button>
+        </div>
+      </div>
     </div>
   </header>
 
-  <!-- Kanban Board -->
-  <div class="kanban-wrapper">
-    <div class="kanban-board">
-
-      <!-- 待处理 -->
-      <div class="column col-pending">
-        <div class="column-header">📥 待处理 <span class="count" id="count-pending">0</span></div>
-        <div class="column-body" data-status="pending" id="col-pending">
-          <div class="empty-hint">暂无任务</div>
-        </div>
-      </div>
-
-      <!-- 处理中 -->
-      <div class="column col-processing">
-        <div class="column-header">⚙️ 处理中 <span class="count" id="count-processing">0</span></div>
-        <div class="column-body" data-status="processing" id="col-processing">
-          <div class="empty-hint">暂无任务</div>
-        </div>
-      </div>
-
-      <!-- 已完成 -->
-      <div class="column col-completed">
-        <div class="column-header">✅ 已完成 <span class="count" id="count-completed">0</span></div>
-        <div class="column-body" data-status="completed" id="col-completed">
-          <div class="empty-hint">暂无任务</div>
-        </div>
-      </div>
-
-      <!-- 已取消 -->
-      <div class="column col-cancelled">
-        <div class="column-header">🚫 已取消 <span class="count" id="count-cancelled">0</span></div>
-        <div class="column-body" data-status="cancelled" id="col-cancelled">
-          <div class="empty-hint">暂无任务</div>
-        </div>
-      </div>
-
+  <!-- Page -->
+  <div class="page">
+    <div class="page-head">
+      <h2>任务看板</h2>
+      <button class="btn-create" id="btnNewTask">＋ 新建任务</button>
     </div>
+
+    <!-- 筛选工具栏 -->
+    <div class="toolbar">
+      <div class="toolbar-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" id="filterSearch" placeholder="搜索任务名称 / TASK-ID">
+      </div>
+      <select class="filter-select" id="filterDept"><option value="">全部部门</option></select>
+      <select class="filter-select" id="filterAssignee"><option value="">全部负责人</option></select>
+      <select class="filter-select" id="filterPriority">
+        <option value="">全部优先级</option>
+        <option value="P0">P0 紧急</option>
+        <option value="P1">P1 高</option>
+        <option value="P2">P2 中</option>
+        <option value="P3">P3 低</option>
+      </select>
+      <select class="filter-select" id="filterStatus">
+        <option value="">全部状态</option>
+        <option value="pending">待处理</option>
+        <option value="processing">处理中</option>
+        <option value="completed">已完成</option>
+        <option value="cancelled">已取消</option>
+      </select>
+      <div class="toolbar-right">
+        <div class="segmented">
+          <button id="viewBoardBtn" class="active">▦　看板</button>
+          <button id="viewListBtn">☰　列表</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 看板模式 -->
+    <div class="kanban-wrapper" id="kanbanView">
+      <div class="kanban-board">
+
+        <div class="column col-pending">
+          <div class="column-head">
+            <span class="dot"></span><span class="name">待处理</span>
+            <span class="count" id="count-pending">0</span>
+          </div>
+          <div class="column-body" data-status="pending" id="col-pending"></div>
+        </div>
+
+        <div class="column col-processing">
+          <div class="column-head">
+            <span class="dot"></span><span class="name">处理中</span>
+            <span class="count" id="count-processing">0</span>
+          </div>
+          <div class="column-body" data-status="processing" id="col-processing"></div>
+        </div>
+
+        <div class="column col-completed">
+          <div class="column-head">
+            <span class="dot"></span><span class="name">已完成</span>
+            <span class="count" id="count-completed">0</span>
+            <button class="more-link" id="showAllCompleted">查看全部 →</button>
+          </div>
+          <div class="column-body" data-status="completed" id="col-completed"></div>
+        </div>
+
+        <div class="column col-cancelled">
+          <div class="column-head">
+            <span class="dot"></span><span class="name">已取消</span>
+            <span class="count" id="count-cancelled">0</span>
+          </div>
+          <div class="column-body" data-status="cancelled" id="col-cancelled"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 列表模式（阶段 4 实现） -->
+    <div id="listView" style="display:none"></div>
   </div>
 
-  <!-- Floating New Task Button -->
-  <button class="btn-new-task" id="btnNewTask" title="新建任务">＋</button>
-  <span class="btn-new-task-label">新建任务</span>
+  <!-- 任务统计与分析：三栏并排（统计 / 趋势 / AI） -->
+  <section class="stats-section">
 
-  <!-- Statistics Panel -->
-  <div class="stats-panel">
-    <div class="stats-header">
-      <h3>📊 任务统计</h3>
-      <div class="stats-controls">
-        <div class="quick-ranges">
-          <button class="quick-range-btn" data-range="week">近一周</button>
-          <button class="quick-range-btn" data-range="month">近一月</button>
-          <button class="quick-range-btn" data-range="quarter">近三月</button>
-          <button class="quick-range-btn" data-range="halfyear">近半年</button>
-          <button class="quick-range-btn" data-range="year">近一年</button>
+    <!-- 1. 任务统计（KPI） -->
+    <div class="panel stat-panel">
+      <div class="panel-head">
+        <span class="panel-ic">📊</span>
+        <span class="panel-title">任务统计</span>
+        <span class="info-dot" title="待处理 / 处理中为当前存量（不受区间限制）；已完成按完成时间、已取消按取消时间统计">i</span>
+        <div class="panel-head-right">
+          <div class="tabs">
+            <button class="tab" data-range="week">近一周</button>
+            <button class="tab" data-range="month">近一月</button>
+            <button class="tab" data-range="quarter">近三月</button>
+            <button class="tab" data-range="halfyear">近半年</button>
+            <button class="tab" data-range="year">近一年</button>
+          </div>
+          <div class="date-range">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+            <input type="date" id="statsStart">
+            <span class="tilde">~</span>
+            <input type="date" id="statsEnd">
+            <svg class="chev-dn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
         </div>
-        <label>从</label>
-        <input type="date" id="statsStart">
-        <label>到</label>
-        <input type="date" id="statsEnd">
-        <button class="stats-query-btn" id="statsQuery">查询</button>
-        <button class="btn-ai-report" id="aiReportBtn">✨ AI 整理汇报</button>
-        <button class="stats-export-btn" id="statsExport">📥 导出 CSV</button>
+      </div>
+      <div class="kpi-grid" id="kpiGrid"></div>
+    </div>
+
+    <!-- 2. 任务趋势 -->
+    <div class="panel trend-panel">
+      <div class="panel-head">
+        <span class="panel-ic">📈</span>
+        <span class="panel-title">任务趋势</span>
+        <select class="mini-select" id="trendRange">
+          <option value="week" selected>近一周</option>
+          <option value="month">近一月</option>
+          <option value="quarter">近三月</option>
+          <option value="halfyear">近半年</option>
+          <option value="year">近一年</option>
+        </select>
+      </div>
+      <div class="chart-legend">
+        <span class="lg"><i style="background:var(--st-pending)"></i>新增任务</span>
+        <span class="lg"><i style="background:var(--st-completed)"></i>完成任务</span>
+        <span class="lg"><i style="background:var(--st-processing)"></i>处理中任务</span>
+      </div>
+      <div class="chart-wrap">
+        <svg id="trendChart" class="trend-chart" preserveAspectRatio="none"></svg>
+        <div class="chart-tip" id="chartTip"></div>
       </div>
     </div>
-    <div class="stats-body" id="statsBody">
-      <div class="stat-bar-group bar-pending">
-        <div class="stat-bar-count" id="statsCount-pending">0</div>
-        <div class="stat-bar-track"><div class="stat-bar-fill" id="statsBar-pending"></div></div>
-        <div class="stat-bar-label">待处理</div>
-      </div>
-      <div class="stat-bar-group bar-processing">
-        <div class="stat-bar-count" id="statsCount-processing">0</div>
-        <div class="stat-bar-track"><div class="stat-bar-fill" id="statsBar-processing"></div></div>
-        <div class="stat-bar-label">处理中</div>
-      </div>
-      <div class="stat-bar-group bar-completed">
-        <div class="stat-bar-count" id="statsCount-completed">0</div>
-        <div class="stat-bar-track"><div class="stat-bar-fill" id="statsBar-completed"></div></div>
-        <div class="stat-bar-label">已完成</div>
-      </div>
-      <div class="stat-bar-group bar-cancelled">
-        <div class="stat-bar-count" id="statsCount-cancelled">0</div>
-        <div class="stat-bar-track"><div class="stat-bar-fill" id="statsBar-cancelled"></div></div>
-        <div class="stat-bar-label">已取消</div>
-      </div>
-    </div>
-  </div>
+
+    <!-- 3. AI 与快捷入口 -->
+    <aside class="ai-side">
+      <button class="ai-card" id="aiReportBtn">
+        <span class="ai-ic">✨</span>
+        <span class="ai-txt">
+          <b>AI 任务周报</b>
+          <small>基于当前任务，生成本周任务汇报</small>
+        </span>
+        <span class="chev">›</span>
+      </button>
+      <button class="link-card" id="statsExport"><span class="ic">⬇</span>导出 CSV<span class="chev">›</span></button>
+      <button class="link-card" id="sideSettings"><span class="ic">⚙</span>任务设置<span class="chev">›</span></button>
+      <button class="link-card" id="sideHelp"><span class="ic">?</span>帮助中心<span class="chev">›</span></button>
+    </aside>
+
+  </section>
+
+
 </div>
+
 
 <!-- ===== Trash / Recycle Bin ===== -->
 <div class="trash-container" id="trashContainer">
   <div class="trash-panel" id="trashPanel">
     <div class="trash-panel-header">
-      <div class="trash-panel-title">🗑 回收站 <span id="trashCount">0</span></div>
+      <div class="trash-panel-title">回收站 <span id="trashCount">0</span></div>
       <button class="btn-trash-clear" id="trashClearBtn" onclick="clearTrash()">清空</button>
     </div>
     <div id="trashList"></div>
@@ -590,36 +1150,64 @@ body {
 <!-- ===== Modal: New Task ===== -->
 <div class="modal-overlay" id="modalNewTask">
   <div class="modal-card">
-    <h2>📝 新建任务</h2>
-    <div class="form-group">
-      <label>任务标题 *</label>
-      <input type="text" id="newTaskTitle" placeholder="请输入任务标题">
-    </div>
-    <div class="form-group">
-      <label>任务描述</label>
-      <textarea id="newTaskDesc" placeholder="请输入任务描述（选填）"></textarea>
-    </div>
-    <div class="form-group">
-      <label>客户来源</label>
-      <input type="text" id="newTaskSource" placeholder="请输入客户来源">
+    <h2>新建任务</h2>
+    <div class="modal-grid">
+      <div class="form-group full">
+        <label>任务名称 *</label>
+        <input type="text" id="newTaskTitle" placeholder="请输入任务名称">
+      </div>
+      <div class="form-group full">
+        <label>任务描述</label>
+        <textarea id="newTaskDesc" placeholder="请输入任务描述（选填）"></textarea>
+      </div>
+      <div class="form-group">
+        <label>所属部门</label>
+        <input type="text" id="newTaskDept" placeholder="如：生信部">
+      </div>
+      <div class="form-group">
+        <label>负责人</label>
+        <input type="text" id="newTaskAssignee" placeholder="如：张三">
+      </div>
+      <div class="form-group">
+        <label>客户来源</label>
+        <input type="text" id="newTaskSource" placeholder="如：荣耀商城">
+      </div>
+      <div class="form-group">
+        <label>优先级</label>
+        <select id="newTaskPriority">
+          <option value="P2" selected>P2 中</option>
+          <option value="P0">P0 紧急</option>
+          <option value="P1">P1 高</option>
+          <option value="P3">P3 低</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>截止时间</label>
+        <input type="date" id="newTaskDue">
+      </div>
+      <div class="form-group">
+        <label>任务标签（逗号分隔）</label>
+        <input type="text" id="newTaskTags" placeholder="如：生信, 紧急">
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeModal('modalNewTask')">取消</button>
-      <button class="btn-primary" id="confirmNewTask">确认创建</button>
+      <button class="btn-primary" id="confirmNewTask">创建任务</button>
     </div>
   </div>
 </div>
 
-<!-- ===== Modal: Task Detail ===== -->
-<div class="modal-overlay" id="modalDetail">
-  <div class="modal-card">
-    <h2 id="detailTitle">📄 任务详情</h2>
-    <div id="detailContent"></div>
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="closeModal('modalDetail')" style="flex:0 0 auto; padding: 10px 32px;">关闭</button>
-    </div>
+<!-- ===== 任务详情 Drawer（右侧滑出） ===== -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeTaskDrawer()"></div>
+<aside class="drawer" id="taskDrawer" aria-hidden="true">
+  <div class="drawer-head">
+    <span class="drawer-dot" id="drawerDot"></span>
+    <span class="drawer-head-title" id="drawerHeadTitle">任务详情</span>
+    <button class="drawer-close" id="drawerClose" title="关闭">×</button>
   </div>
-</div>
+  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-foot" id="drawerFoot"></div>
+</aside>
 
 <!-- ===== Modal: Cancel Reason ===== -->
 <div class="modal-overlay" id="modalCancel">
@@ -682,6 +1270,32 @@ body {
 
 <script>
 // ============================================================
+//  主题（深色 / 浅色）
+//  立即应用，避免首屏主题闪烁；偏好存 localStorage（浏览器级，登录前即生效）
+// ============================================================
+const THEME_KEY = 'kanban_theme';
+function getTheme() {
+  try { return localStorage.getItem(THEME_KEY) || 'light'; } catch (e) { return 'dark'; }
+}
+function applyTheme(t) {
+  const theme = (t === 'light') ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) {
+    btn.textContent = theme === 'dark' ? '🌙' : '☀️';
+    btn.title = theme === 'dark' ? '切换到浅色主题' : '切换到深色主题';
+  }
+  return theme;
+}
+function toggleTheme() {
+  const next = getTheme() === 'dark' ? 'light' : 'dark';
+  try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+  applyTheme(next);
+}
+// 立即应用（脚本位于 body 末尾，DOM 已就绪）
+applyTheme(getTheme());
+
+// ============================================================
 //  DATA
 // ============================================================
 const STORAGE_KEY = 'kanban_tasks';
@@ -699,6 +1313,7 @@ let currentUser = null;
 let dragData = null;          // { taskId, fromStatus, fromIndex }
 let pendingCancel = null;     // { taskId, toStatus, toIndex } — deferred cancel action
 let nextSeq = 1;
+let showAllCompleted = false;   // 已完成列是否展开全部
 
 // ============================================================
 //  INIT
@@ -745,7 +1360,7 @@ function setQuickRange(range, silent) {
   document.getElementById('statsStart').value = toDateStr(start);
   document.getElementById('statsEnd').value = toDateStr(end);
   // 更新按钮激活态
-  document.querySelectorAll('.quick-range-btn').forEach(btn => {
+  document.querySelectorAll('.tab').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.range === range);
   });
   if (!silent) renderStats();
@@ -753,7 +1368,7 @@ function setQuickRange(range, silent) {
 
 // 用户手动改日期后，清除快捷按钮的激活态（表示自定义区间）
 function clearQuickRangeActive() {
-  document.querySelectorAll('.quick-range-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
 }
 
 function toDateStr(d) {
@@ -792,7 +1407,15 @@ function toCloudRow(t) {
     status: t.status,
     order: t.order || 0,
     cancel_reason: t.cancelReason || '',
+    priority: t.priority || 'P2',
+    assignee: t.assignee || '',
+    department: t.department || '',
+    due_date: t.dueDate || null,
+    tags: Array.isArray(t.tags) ? t.tags : [],
     created_at: t.createdAt || new Date().toISOString(),
+    started_at: t.startedAt || null,
+    completed_at: t.completedAt || null,
+    cancelled_at: t.cancelledAt || null,
     updated_at: t.updatedAt || new Date().toISOString()
   };
 }
@@ -807,7 +1430,15 @@ function fromCloudRow(r) {
     status: r.status,
     order: r.order || 0,
     cancelReason: r.cancel_reason || '',
+    priority: r.priority || 'P2',
+    assignee: r.assignee || '',
+    department: r.department || '',
+    dueDate: r.due_date || '',
+    tags: r.tags || [],
     createdAt: r.created_at,
+    startedAt: r.started_at || '',
+    completedAt: r.completed_at || '',
+    cancelledAt: r.cancelled_at || '',
     updatedAt: r.updated_at,
     deletedAt: r.deleted_at || null
   };
@@ -949,7 +1580,12 @@ function enterApp() {
   document.getElementById('loginPage').classList.add('hidden');
   document.getElementById('mainApp').classList.add('show');
   const email = (currentUser && currentUser.email) ? currentUser.email : '用户';
-  document.getElementById('headerUser').textContent = '👤 ' + email;
+  const nameEl = document.getElementById('headerUser');
+  if (nameEl) nameEl.textContent = email;
+  const av = document.getElementById('userAvatar');
+  if (av) av.textContent = (email.charAt(0) || 'U').toUpperCase();
+  const dd = document.getElementById('ddEmail');
+  if (dd) dd.textContent = email;
   loadAiSettings();   // 从账号加载 AI 配置（含本地缓存 + 云端同步）
 }
 
@@ -978,10 +1614,49 @@ function genTaskId() {
 // ============================================================
 //  TASK CRUD
 // ============================================================
-function createTask(title, desc, source) {
+// ============================================================
+//  状态流转的时间戳维护
+//  规则（跟随当前状态）：
+//   · 进入某阶段时写入该阶段时间戳（首次进入才写，不覆盖）
+//   · 回退时清除「更后阶段」的时间戳，保证标签与当前状态一致
+//   · 任何流转都刷新 updatedAt（最后更新时间）
+// ============================================================
+function applyStatusFields(task, newStatus, opts) {
+  const now = new Date().toISOString();
+  const o = opts || {};
+  task.status = newStatus;
+  task.updatedAt = now;               // 所有任务都有最后更新时间
+
+  if (newStatus === 'pending') {
+    // 回到待处理：尚未启动/完成/取消
+    task.startedAt = '';
+    task.completedAt = '';
+    task.cancelledAt = '';
+    task.cancelReason = '';
+  } else if (newStatus === 'processing') {
+    // 处理中：清除完成/取消（后阶段），启动时间保留，首次则写入
+    task.completedAt = '';
+    task.cancelledAt = '';
+    task.cancelReason = '';
+    if (!task.startedAt) task.startedAt = now;
+  } else if (newStatus === 'completed') {
+    // 已完成：清除取消（后阶段），完成时间首次写入
+    task.cancelledAt = '';
+    task.cancelReason = '';
+    if (!task.completedAt) task.completedAt = now;
+  } else if (newStatus === 'cancelled') {
+    // 已取消：清除完成；取消时间首次写入；取消原因由调用方提供
+    task.completedAt = '';
+    if (!task.cancelledAt) task.cancelledAt = now;
+    if (o.reason != null) task.cancelReason = o.reason;
+  }
+}
+
+function createTask(title, desc, source, extra) {
   const now = new Date().toISOString();
   const allPending = tasks.filter(t => t.status === 'pending');
   const maxOrder = allPending.length > 0 ? Math.max(...allPending.map(t => t.order)) : -1;
+  const e = extra || {};
   const task = {
     id: genTaskId(),
     title: title.trim(),
@@ -990,7 +1665,15 @@ function createTask(title, desc, source) {
     status: 'pending',
     order: maxOrder + 1,
     cancelReason: '',
+    priority: e.priority || 'P2',
+    assignee: (e.assignee || '').trim(),
+    department: (e.department || '').trim(),
+    dueDate: e.dueDate || '',
+    tags: Array.isArray(e.tags) ? e.tags : [],
     createdAt: now,
+    startedAt: '',
+    completedAt: '',
+    cancelledAt: '',
     updatedAt: now
   };
   tasks.push(task);
@@ -1002,12 +1685,7 @@ function createTask(title, desc, source) {
 function updateTaskStatus(taskId, newStatus, cancelReason) {
   const task = tasks.find(t => t.id === taskId);
   if (!task) return;
-  const oldStatus = task.status;
-  task.status = newStatus;
-  task.updatedAt = new Date().toISOString();
-  if (newStatus === 'cancelled') {
-    task.cancelReason = cancelReason || '';
-  }
+  applyStatusFields(task, newStatus, { reason: cancelReason });
   // Place at the end of the new column
   const sameStatus = tasks.filter(t => t.status === newStatus && t.id !== taskId);
   task.order = sameStatus.length > 0 ? Math.max(...sameStatus.map(t => t.order)) + 1 : 0;
@@ -1018,9 +1696,7 @@ function updateTaskStatus(taskId, newStatus, cancelReason) {
 function reorderTask(taskId, newStatus, targetIndex) {
   const task = tasks.find(t => t.id === taskId);
   if (!task) return;
-  const oldStatus = task.status;
-  task.status = newStatus;
-  task.updatedAt = new Date().toISOString();
+  applyStatusFields(task, newStatus);
   // Get all tasks in the target status (excluding the moved task)
   let sameStatus = tasks.filter(t => t.status === newStatus && t.id !== taskId);
   // Insert at targetIndex
@@ -1044,57 +1720,299 @@ function renderAll() {
   renderTrash();
 }
 
-function renderColumns() {
-  ['pending', 'processing', 'completed', 'cancelled'].forEach(status => {
-    const col = document.getElementById(`col-${status}`);
-    const items = getTasksByStatus(status);
-    document.getElementById(`count-${status}`).textContent = items.length;
-    if (items.length === 0) {
-      col.innerHTML = '<div class="empty-hint">暂无任务</div>';
-      col.classList.add('empty');
-    } else {
-      col.classList.remove('empty');
-      col.innerHTML = items.map(t => renderCard(t)).join('');
+// ---- 卡片用的小图标（内联 SVG，替代 emoji） ----
+const ICON = {
+  dept:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V8l7-4 7 4v13M9 21v-5h6v5"/></svg>',
+  user:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>',
+  cal:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+  play:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5 19 12 7 19.5z"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6.5 9.5 17 4 11.5"/></svg>',
+  x:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>'
+};
+
+// ---- 筛选（搜索 + 部门 + 负责人 + 优先级 + 状态） ----
+function getFilteredTasks() {
+  const kw = (document.getElementById('filterSearch')?.value || '').trim().toLowerCase();
+  const dept = document.getElementById('filterDept')?.value || '';
+  const asg = document.getElementById('filterAssignee')?.value || '';
+  const prio = document.getElementById('filterPriority')?.value || '';
+  const st = document.getElementById('filterStatus')?.value || '';
+  return tasks.filter(t => {
+    if (st && t.status !== st) return false;
+    if (dept && (t.department || '') !== dept) return false;
+    if (asg && (t.assignee || '') !== asg) return false;
+    if (prio && (t.priority || 'P2') !== prio) return false;
+    if (kw) {
+      const hay = (t.id + ' ' + t.title + ' ' + (t.description || '') + ' ' + (t.source || '')
+        + ' ' + (t.assignee || '') + ' ' + (t.department || '')).toLowerCase();
+      if (hay.indexOf(kw) === -1) return false;
     }
+    return true;
   });
 }
 
+// 用任务数据刷新筛选下拉的候选值（保留当前选中）
+function refreshFilterOptions() {
+  const fill = (id, values, placeholder) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cur = el.value;
+    const uniq = Array.from(new Set(values.filter(v => v && String(v).trim()))).sort();
+    el.innerHTML = '<option value="">' + placeholder + '</option>'
+      + uniq.map(v => `<option value="${escHtml(v)}">${escHtml(v)}</option>`).join('');
+    if (uniq.indexOf(cur) !== -1) el.value = cur;
+  };
+  fill('filterDept', tasks.map(t => t.department), '全部部门');
+  fill('filterAssignee', tasks.map(t => t.assignee), '全部负责人');
+}
+
+// ---- 空状态（轻量，不抢注意力） ----
+function emptyStateHtml(status) {
+  const label = STATUS_LABELS[status] || '';
+  const sub = {
+    pending: '当前没有待处理的任务',
+    processing: '当前没有处理中的任务',
+    completed: '当前没有已完成的任务',
+    cancelled: '当前没有已取消的任务'
+  }[status] || '';
+  return `<div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M8 3v3.5M16 3v3.5M3.5 9.5h17"/>
+        <path d="M9 14h6"/>
+      </svg>
+      <div class="t">暂无${escHtml(label)}任务</div>
+      <div class="s">${escHtml(sub)}</div>
+    </div>`;
+}
+
+// ---- 耗时计算（完成：完成−启动；处理中：现在−启动） ----
+function elapsedText(task) {
+  const start = task.startedAt;
+  if (!start) return '';
+  let endIso = task.completedAt || task.cancelledAt || '';
+  if (!endIso && task.status === 'processing') endIso = new Date().toISOString();
+  if (!endIso) return '';
+  const ms = new Date(endIso) - new Date(start);
+  if (!(ms > 0)) return '';
+  const h = ms / 3600000;
+  if (h < 1) return Math.max(1, Math.round(ms / 60000)) + 'm';
+  if (h >= 10) return Math.round(h) + 'h';
+  return (Math.round(h * 10) / 10) + 'h';
+}
+
+// 截止日期显示 MM-DD
+function fmtDue(d) {
+  if (!d) return '';
+  const dt = new Date(d + (String(d).length <= 10 ? 'T00:00:00' : ''));
+  if (isNaN(dt.getTime())) return String(d);
+  return String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+}
+// 是否超期（未完成/未取消 且 截止日已过）
+function isOverdue(task) {
+  if (!task.dueDate) return false;
+  if (task.status === 'completed' || task.status === 'cancelled') return false;
+  const dt = new Date(task.dueDate + 'T23:59:59');
+  return !isNaN(dt.getTime()) && dt.getTime() < Date.now();
+}
+
+function renderColumns() {
+  const filtered = getFilteredTasks();
+  ['pending', 'processing', 'completed', 'cancelled'].forEach(status => {
+    const col = document.getElementById(`col-${status}`);
+    if (!col) return;
+    const totalAll = tasks.filter(t => t.status === status).length;
+    document.getElementById(`count-${status}`).textContent = totalAll;
+
+    let items = filtered.filter(t => t.status === status).sort((a, b) => a.order - b.order);
+    let truncated = false;
+    // 已完成列默认只显示最近 5 条，避免无限堆叠
+    if (status === 'completed' && !showAllCompleted && items.length > 5) {
+      items = items.slice(0, 5);
+      truncated = true;
+    }
+
+    if (items.length === 0) {
+      col.innerHTML = emptyStateHtml(status);
+      col.classList.add('empty');
+    } else {
+      col.classList.remove('empty');
+      col.innerHTML = items.map(renderCard).join('')
+        + (truncated
+            ? `<button class="more-link" style="margin:2px auto 0" onclick="toggleShowAllCompleted()">还有 ${items.length === 0 ? 0 : (filtered.filter(t => t.status === 'completed').length - 5)} 条，查看全部 →</button>`
+            : '');
+    }
+  });
+  const moreBtn = document.getElementById('showAllCompleted');
+  // 侧栏：任务设置 / 帮助中心（占位）
+  const ss = document.getElementById('sideSettings');
+  if (ss) ss.addEventListener('click', () => {
+    alert('任务设置：可用于配置默认部门、负责人候选等（后续阶段实现）');
+  });
+  const sh = document.getElementById('sideHelp');
+  if (sh) sh.addEventListener('click', () => {
+    alert('帮助中心\n\n· 拖拽卡片可改变任务状态\n· 点击卡片查看详情\n· 卡片右下 ⋯ 可复制/移动/删除\n· 底部可切换统计周期并生成 AI 周报');
+  });
+
+  // 图表随窗口宽度自适应
+  let rzTimer = null;
+  window.addEventListener('resize', () => {
+    if (rzTimer) clearTimeout(rzTimer);
+    rzTimer = setTimeout(() => { try { renderTrendChart(); syncStatsHeight(); } catch (e) {} }, 180);
+  });
+  if (moreBtn) moreBtn.textContent = showAllCompleted ? '收起 ←' : '查看全部 →';
+}
+
+function toggleShowAllCompleted() {
+  showAllCompleted = !showAllCompleted;
+  renderColumns();
+}
+
+// ---- 任务卡片 ----
 function renderCard(task) {
-  const status = task.status;
-  let actionHtml = '';
-  if (status === 'pending') {
-    actionHtml = `
-      <button class="btn-start" onclick="event.stopPropagation(); actionStart('${task.id}')">▶ 启动</button>
-      <button class="btn-cancel" onclick="event.stopPropagation(); actionCancel('${task.id}')">✕ 取消</button>
-      <button class="btn-delete" onclick="event.stopPropagation(); actionDelete('${task.id}')" title="删除任务">🗑</button>
-    `;
-  } else if (status === 'processing') {
-    actionHtml = `
-      <button class="btn-complete" onclick="event.stopPropagation(); actionComplete('${task.id}')">✓ 完成</button>
-      <button class="btn-cancel" onclick="event.stopPropagation(); actionCancel('${task.id}')">✕ 取消</button>
-      <button class="btn-delete" onclick="event.stopPropagation(); actionDelete('${task.id}')" title="删除任务">🗑</button>
-    `;
-  } else if (status === 'completed') {
-    actionHtml = `
-      <button class="btn-delete" onclick="event.stopPropagation(); actionDelete('${task.id}')" title="删除任务">🗑 删除</button>
-    `;
-  } else if (status === 'cancelled') {
-    actionHtml = `
-      <button class="btn-view-reason" onclick="event.stopPropagation(); viewCancelReason('${task.id}')">📄 查看原因</button>
-      <button class="btn-delete" onclick="event.stopPropagation(); actionDelete('${task.id}')" title="删除任务">🗑</button>
-    `;
+  const st = task.status;
+  const prio = task.priority || 'P2';
+  const prioCls = prio === 'P0' ? 'p0' : (prio === 'P1' ? 'p1' : '');
+  const stLabel = STATUS_LABELS[st] || st;
+
+  // 部门 / 负责人
+  const meta = [];
+  if (task.department) meta.push(`<span class="mi">${ICON.dept}<span class="ell">${escHtml(task.department)}</span></span>`);
+  if (task.assignee) meta.push(`<span class="mi">${ICON.user}<span class="ell">${escHtml(task.assignee)}</span></span>`);
+
+  // 截止 / 耗时
+  const due = [];
+  if (task.dueDate) {
+    const od = isOverdue(task);
+    due.push(`<span class="mi${od ? ' overdue' : ''}">${ICON.cal}${od ? '已超期 ' : '截止 '}${escHtml(fmtDue(task.dueDate))}</span>`);
+  }
+  const el = elapsedText(task);
+  if (el) due.push(`<span class="mi">${ICON.clock}${st === 'completed' || st === 'cancelled' ? '耗时 ' : '已耗时 '}${el}</span>`);
+
+  // 阶段时间
+  let whenHtml = '';
+  if (st === 'processing' && task.startedAt) {
+    whenHtml = `<div class="card-when"><span class="mi">${ICON.play}启动 ${escHtml(shortTime(task.startedAt))}</span></div>`;
+  } else if (st === 'completed' && task.completedAt) {
+    whenHtml = `<div class="card-when"><span class="mi done">${ICON.check}完成 ${escHtml(shortTime(task.completedAt))}</span></div>`;
+  } else if (st === 'cancelled' && task.cancelledAt) {
+    whenHtml = `<div class="card-when"><span class="mi cancelled">${ICON.x}取消 ${escHtml(shortTime(task.cancelledAt))}</span></div>`;
+  } else if (st === 'pending' && task.createdAt) {
+    whenHtml = `<div class="card-when"><span class="mi">创建 ${escHtml(shortTime(task.createdAt))}</span></div>`;
   }
 
+  // 标签
+  const tagsHtml = (Array.isArray(task.tags) && task.tags.length)
+    ? `<div class="card-tags">${task.tags.map(t => `<span class="tag">${escHtml(t)}</span>`).join('')}</div>`
+    : '';
+
+  // 快捷操作
+  let actions = '';
+  if (st === 'pending') {
+    actions = `<button class="btn-start" onclick="event.stopPropagation(); actionStart('${task.id}')">启动</button>
+               <button class="btn-cancel" onclick="event.stopPropagation(); actionCancel('${task.id}')">取消</button>`;
+  } else if (st === 'processing') {
+    actions = `<button class="btn-complete" onclick="event.stopPropagation(); actionComplete('${task.id}')">完成</button>
+               <button class="btn-cancel" onclick="event.stopPropagation(); actionCancel('${task.id}')">取消</button>`;
+  } else if (st === 'cancelled') {
+    actions = `<button class="btn-view-reason" onclick="event.stopPropagation(); viewCancelReason('${task.id}')">查看原因</button>`;
+  }
+  actions += `<button class="btn-delete" onclick="event.stopPropagation(); actionDelete('${task.id}')">删除</button>`;
+
   return `
-    <div class="task-card" draggable="true" data-task-id="${task.id}"
+    <div class="task-card" draggable="true" data-task-id="${task.id}" data-status="${st}"
          ondragstart="onDragStart(event)" ondragend="onDragEnd(event)"
          onclick="showDetail('${task.id}')">
-      <div class="task-id" onclick="event.stopPropagation(); showDetail('${task.id}')">${task.id}</div>
-      <div class="task-title" onclick="event.stopPropagation(); showDetail('${task.id}')">${escHtml(task.title)}</div>
-      <div class="task-source">🏷️ ${escHtml(task.source)}</div>
-      <div class="task-actions">${actionHtml}</div>
+      <div class="card-top">
+        <span class="card-id" onclick="event.stopPropagation(); showDetail('${task.id}')">${escHtml(task.id)}</span>
+        <span class="prio ${prioCls}">${escHtml(prio)}</span>
+        <span class="spacer"></span>
+        <span class="card-status ${st}">${escHtml(stLabel)}</span>
+        <button class="card-menu-btn" title="更多操作"
+                onclick="toggleCardMenu(event, '${task.id}')">⋯</button>
+      </div>
+      <div class="card-title" onclick="event.stopPropagation(); showDetail('${task.id}')">${escHtml(task.title)}</div>
+      ${meta.length ? `<div class="card-meta">${meta.join('')}</div>` : ''}
+      ${due.length ? `<div class="card-meta">${due.join('')}</div>` : ''}
+      ${whenHtml}
+      ${tagsHtml}
+      <div class="task-actions">${actions}</div>
+      <div class="card-menu" id="menu-${task.id}">
+        <button class="dropdown-item" onclick="event.stopPropagation(); duplicateTask('${task.id}')">复制任务</button>
+        <button class="dropdown-item" onclick="event.stopPropagation(); moveTaskMenu('${task.id}')">移动任务</button>
+        <div class="dropdown-sep"></div>
+        <button class="dropdown-item danger" onclick="event.stopPropagation(); actionDelete('${task.id}')">删除任务</button>
+      </div>
     </div>
   `;
+}
+
+// ---- 卡片 ⋯ 菜单 ----
+function toggleCardMenu(ev, taskId) {
+  ev.stopPropagation();
+  const el = document.getElementById('menu-' + taskId);
+  if (!el) return;
+  const open = el.classList.contains('show');
+  document.querySelectorAll('.card-menu.show').forEach(m => m.classList.remove('show'));
+  if (!open) el.classList.add('show');
+}
+function closeCardMenus() {
+  document.querySelectorAll('.card-menu.show').forEach(m => m.classList.remove('show'));
+}
+
+// ---- 复制任务（沿用当前看板状态之外的字段） ----
+function duplicateTask(taskId) {
+  closeCardMenus();
+  const src = tasks.find(t => t.id === taskId);
+  if (!src) return;
+  const now = new Date().toISOString();
+  const sameStatus = tasks.filter(t => t.status === src.status);
+  const copy = Object.assign({}, src, {
+    id: genTaskId(),
+    title: src.title + '（副本）',
+    status: 'pending',
+    order: tasks.filter(t => t.status === 'pending').length,
+    createdAt: now, startedAt: '', completedAt: '', cancelledAt: '',
+    cancelReason: '', updatedAt: now
+  });
+  tasks.push(copy);
+  saveToStorage();
+  renderAll();
+}
+
+// ---- 移动任务（选择目标列） ----
+function moveTaskMenu(taskId) {
+  closeCardMenus();
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+  const opts = ['pending', 'processing', 'completed', 'cancelled']
+    .filter(s => s !== task.status)
+    .map(s => STATUS_LABELS[s]);
+  const pick = prompt('移动到哪一列？（输入序号）\n' + opts.map((o, i) => (i + 1) + '. ' + o).join('\n'));
+  const idx = parseInt(pick, 10);
+  if (!idx || idx < 1 || idx > opts.length) return;
+  const target = ['pending', 'processing', 'completed', 'cancelled'].filter(s => s !== task.status)[idx - 1];
+  if (target === 'cancelled') {
+    pendingCancel = { taskId: task.id, toStatus: 'cancelled' };
+    document.getElementById('cancelReasonInput').value = '';
+    openModal('modalCancel');
+  } else {
+    reorderTask(task.id, target, 999);
+  }
+}
+
+
+
+// 卡片上的短时间格式：MM-DD HH:mm
+function shortTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${m}-${day} ${h}:${mi}`;
 }
 
 function escHtml(s) {
@@ -1241,6 +2159,7 @@ function renderTrash() {
   }).join('');
 }
 
+// 取消确认（同时服务于按钮触发与拖拽触发；拖拽会带 toIndex）
 function doConfirmCancel() {
   const reason = document.getElementById('cancelReasonInput').value.trim();
   if (!reason) {
@@ -1251,13 +2170,21 @@ function doConfirmCancel() {
   if (pendingCancel) {
     const task = tasks.find(t => t.id === pendingCancel.taskId);
     if (task) {
-      task.cancelReason = reason;
-      task.status = 'cancelled';
-      task.updatedAt = new Date().toISOString();
-      const sameStatus = tasks.filter(t => t.status === 'cancelled' && t.id !== task.id);
-      task.order = sameStatus.length > 0 ? Math.max(...sameStatus.map(t => t.order)) + 1 : 0;
+      const toStatus = pendingCancel.toStatus || 'cancelled';
+      applyStatusFields(task, toStatus, { reason: reason });
+      const sameStatus = tasks.filter(t => t.status === toStatus && t.id !== task.id);
+      const idx = pendingCancel.toIndex;
+      if (idx !== undefined && idx <= sameStatus.length) {
+        sameStatus.splice(idx, 0, task);
+      } else {
+        sameStatus.push(task);
+      }
+      sameStatus.forEach((t, i) => t.order = i);
       saveToStorage();
       renderAll();
+      // 抽屉打开时同步刷新，避免详情停留在旧状态
+      const _dw = document.getElementById('taskDrawer');
+      if (_dw && _dw.classList.contains('show')) showDetail(task.id);
     }
     pendingCancel = null;
   }
@@ -1267,50 +2194,176 @@ function doConfirmCancel() {
 // ============================================================
 //  DETAIL MODAL
 // ============================================================
+// ============================================================
+//  任务详情 Drawer
+// ============================================================
+// 由现有时间戳推导操作日志（真实数据，无需额外表）
+function buildActivityLog(task) {
+  const who = task.assignee || '—';
+  const items = [];
+  if (task.createdAt) items.push({ time: task.createdAt, who, what: '创建任务', kind: 'done' });
+  if (task.startedAt) items.push({ time: task.startedAt, who, what: '开始处理', kind: 'done' });
+  if (task.completedAt) items.push({ time: task.completedAt, who, what: '标记为已完成', kind: 'done' });
+  if (task.cancelledAt) items.push({
+    time: task.cancelledAt, who,
+    what: '取消任务' + (task.cancelReason ? '：' + task.cancelReason : ''),
+    kind: 'done'
+  });
+  items.sort((a, b) => new Date(a.time) - new Date(b.time));
+  // 最后一项标记为「当前节点」
+  if (items.length) items[items.length - 1].kind = 'now';
+  return items;
+}
+
 function showDetail(taskId) {
   const task = tasks.find(t => t.id === taskId);
   if (!task) return;
-  document.getElementById('detailTitle').textContent = '📄 任务详情';
-  const statusColor = {
-    pending: 'pending', processing: 'processing', completed: 'completed', cancelled: 'cancelled'
-  };
-  document.getElementById('detailContent').innerHTML = `
-    <div class="detail-field">
-      <div class="label">任务编号</div>
-      <div class="value">${task.id}</div>
+  const st = task.status;
+  const stLabel = STATUS_LABELS[st] || st;
+  const prio = task.priority || 'P2';
+  const prioCls = prio === 'P0' ? 'p0' : (prio === 'P1' ? 'p1' : '');
+  const dotColor = {
+    pending: 'var(--st-pending)', processing: 'var(--st-processing)',
+    completed: 'var(--st-completed)', cancelled: 'var(--st-cancelled)'
+  }[st] || 'var(--text-3)';
+
+  // 头部
+  const dot = document.getElementById('drawerDot');
+  if (dot) dot.style.background = dotColor;
+  const ht = document.getElementById('drawerHeadTitle');
+  if (ht) ht.textContent = '任务详情 · ' + stLabel;
+
+  const item = (k, v) => `<div class="dr-item"><div class="k">${escHtml(k)}</div><div class="v">${v}</div></div>`;
+  const dash = '<span style="color:var(--text-3)">—</span>';
+  const fmt = (t) => t ? escHtml(formatTime(t)) : dash;
+
+  // 基本信息
+  const basic = [
+    item('负责人', task.assignee ? escHtml(task.assignee) : dash),
+    item('所属部门', task.department ? escHtml(task.department) : dash),
+    item('客户来源', task.source ? escHtml(task.source) : dash),
+    item('优先级', `<span class="dr-badge ${prioCls}">${escHtml(prio)}</span>`),
+    item('截止时间', task.dueDate ? escHtml(fmtDue(task.dueDate)) + (isOverdue(task) ? ' <span style="color:var(--danger);font-size:11.5px">已超期</span>' : '') : dash),
+    item('已耗时', elapsedText(task) ? escHtml(elapsedText(task)) : dash)
+  ].join('');
+
+  // 时间线
+  const timeline = [
+    item('创建时间', fmt(task.createdAt)),
+    item('开始时间', fmt(task.startedAt)),
+    item('完成时间', fmt(task.completedAt)),
+    item('取消时间', fmt(task.cancelledAt)),
+    item('最后更新', fmt(task.updatedAt))
+  ].join('');
+
+  // 操作日志
+  const log = buildActivityLog(task);
+  const logHtml = log.length
+    ? `<div class="dr-log">${log.map(x => `
+        <div class="dr-log-item ${x.kind === 'now' ? 'now' : ''}">
+          <div class="dr-log-when">${escHtml(formatTime(x.time))}</div>
+          <div class="dr-log-what">${escHtml(x.what)}</div>
+          <div class="dr-log-who">${escHtml(x.who)}</div>
+        </div>`).join('')}</div>`
+    : '<div class="dr-empty">暂无操作记录</div>';
+
+  const body = `
+    <div class="dr-title-wrap">
+      <div class="dr-id">${escHtml(task.id)}</div>
+      <div class="dr-title">${escHtml(task.title)}</div>
+      <div class="dr-badges">
+        <span class="dr-badge ${st}">${escHtml(stLabel)}</span>
+        <span class="dr-badge ${prioCls}">${escHtml(prio)}</span>
+      </div>
     </div>
-    <div class="detail-field">
-      <div class="label">任务标题</div>
-      <div class="value" style="font-size:18px;font-weight:600;">${escHtml(task.title)}</div>
+
+    <div class="dr-sec">
+      <div class="dr-sec-title">基本信息</div>
+      <div class="dr-grid">${basic}</div>
     </div>
-    <div class="detail-field">
-      <div class="label">任务描述</div>
-      <div class="value">${escHtml(task.description) || '<span style="color:rgba(255,255,255,0.3)">暂无描述</span>'}</div>
+
+    <div class="dr-sec">
+      <div class="dr-sec-title">时间线</div>
+      <div class="dr-grid">${timeline}</div>
     </div>
-    <div class="detail-field">
-      <div class="label">客户来源</div>
-      <div class="value">${escHtml(task.source)}</div>
+
+    <div class="dr-sec">
+      <div class="dr-sec-title">任务描述</div>
+      ${task.description ? `<div class="dr-desc">${escHtml(task.description)}</div>` : '<div class="dr-empty">暂无描述</div>'}
     </div>
-    <div class="detail-field">
-      <div class="label">当前状态</div>
-      <div class="value"><span class="status-badge ${statusColor[task.status]}">${STATUS_LABELS[task.status]}</span></div>
-    </div>
-    <div class="detail-field">
-      <div class="label">创建时间</div>
-      <div class="value">${formatTime(task.createdAt)}</div>
-    </div>
-    <div class="detail-field">
-      <div class="label">最后更新</div>
-      <div class="value">${formatTime(task.updatedAt)}</div>
-    </div>
+
     ${task.cancelReason ? `
-    <div class="detail-field">
-      <div class="label">取消原因</div>
-      <div class="value reason">${escHtml(task.cancelReason)}</div>
+    <div class="dr-sec">
+      <div class="dr-sec-title">取消原因</div>
+      <div class="dr-reason">${escHtml(task.cancelReason)}</div>
     </div>` : ''}
+
+    ${(Array.isArray(task.tags) && task.tags.length) ? `
+    <div class="dr-sec">
+      <div class="dr-sec-title">任务标签</div>
+      <div class="dr-tags">${task.tags.map(t => `<span class="dr-tag">${escHtml(t)}</span>`).join('')}</div>
+    </div>` : ''}
+
+    <div class="dr-sec">
+      <div class="dr-sec-title">处理记录</div>
+      ${logHtml}
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-sec-title">附件与评论</div>
+      <div class="dr-empty">暂未启用（后续阶段实现）</div>
+    </div>
   `;
-  openModal('modalDetail');
+  document.getElementById('drawerBody').innerHTML = body;
+
+  // 底部操作
+  let foot = '';
+  if (st === 'pending') {
+    foot += `<button class="primary" onclick="drawerAction('start','${task.id}')">启动任务</button>`;
+    foot += `<button onclick="drawerAction('cancel','${task.id}')">取消任务</button>`;
+  } else if (st === 'processing') {
+    foot += `<button class="primary" onclick="drawerAction('complete','${task.id}')">完成任务</button>`;
+    foot += `<button onclick="drawerAction('cancel','${task.id}')">取消任务</button>`;
+  } else if (st === 'completed') {
+    foot += `<button class="ok" onclick="drawerAction('reopen','${task.id}')">重新打开</button>`;
+  } else if (st === 'cancelled') {
+    foot += `<button class="ok" onclick="drawerAction('restart','${task.id}')">重启任务</button>`;
+  }
+  foot += `<button class="danger" onclick="drawerAction('delete','${task.id}')">删除</button>`;
+  document.getElementById('drawerFoot').innerHTML = foot;
+
+  // 打开
+  document.getElementById('drawerOverlay').classList.add('show');
+  const dr = document.getElementById('taskDrawer');
+  dr.classList.add('show');
+  dr.setAttribute('aria-hidden', 'false');
 }
+
+function closeTaskDrawer() {
+  document.getElementById('drawerOverlay').classList.remove('show');
+  const dr = document.getElementById('taskDrawer');
+  if (dr) { dr.classList.remove('show'); dr.setAttribute('aria-hidden', 'true'); }
+}
+
+// Drawer 内的操作
+function drawerAction(kind, taskId) {
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+  if (kind === 'start') { updateTaskStatus(taskId, 'processing'); showDetail(taskId); }
+  else if (kind === 'complete') { updateTaskStatus(taskId, 'completed'); showDetail(taskId); }
+  else if (kind === 'reopen') { updateTaskStatus(taskId, 'processing'); showDetail(taskId); }
+  else if (kind === 'restart') { updateTaskStatus(taskId, 'processing'); showDetail(taskId); }
+  else if (kind === 'cancel') {
+    pendingCancel = { taskId, toStatus: 'cancelled' };
+    document.getElementById('cancelReasonInput').value = '';
+    openModal('modalCancel');
+  } else if (kind === 'delete') {
+    closeTaskDrawer();
+    actionDelete(taskId);
+  }
+}
+
+
 
 function formatTime(iso) {
   if (!iso) return '-';
@@ -1488,50 +2541,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// Override confirmCancel for drag-drop case
-document.addEventListener('DOMContentLoaded', () => {
-  const origConfirm = doConfirmCancel;
-  window.doConfirmCancel = function() {
-    const reason = document.getElementById('cancelReasonInput').value.trim();
-    if (!reason) {
-      document.getElementById('cancelReasonInput').style.borderColor = '#ff6b6b';
-      document.getElementById('cancelReasonInput').placeholder = '请填写取消原因（必填）';
-      return;
-    }
-    if (pendingCancel) {
-      const task = tasks.find(t => t.id === pendingCancel.taskId);
-      if (task) {
-        task.cancelReason = reason;
-        if (pendingCancel.toStatus === 'cancelled') {
-          task.status = 'cancelled';
-          task.updatedAt = new Date().toISOString();
-          const sameStatus = tasks.filter(t => t.status === 'cancelled' && t.id !== task.id);
-          if (pendingCancel.toIndex !== undefined && pendingCancel.toIndex <= sameStatus.length) {
-            sameStatus.splice(pendingCancel.toIndex, 0, task);
-          } else {
-            sameStatus.push(task);
-          }
-          sameStatus.forEach((t, i) => t.order = i);
-        } else {
-          task.status = pendingCancel.toStatus;
-          task.updatedAt = new Date().toISOString();
-          const sameStatus = tasks.filter(t => t.status === pendingCancel.toStatus && t.id !== task.id);
-          if (pendingCancel.toIndex !== undefined && pendingCancel.toIndex <= sameStatus.length) {
-            sameStatus.splice(pendingCancel.toIndex, 0, task);
-          } else {
-            sameStatus.push(task);
-          }
-          sameStatus.forEach((t, i) => t.order = i);
-        }
-        saveToStorage();
-        renderAll();
-      }
-      pendingCancel = null;
-    }
-    closeModal('modalCancel');
-  };
-});
-
 // ============================================================
 //  MOVABLE TRASH ICON
 // ============================================================
@@ -1588,26 +2597,291 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================
 //  STATISTICS
 // ============================================================
-function renderStats() {
+// 统计口径：
+//  · 待处理 / 处理中 → 当前存量，忽略统计区间
+//  · 已完成 → 按「完成时间」落在区间内
+//  · 已取消 → 按「取消时间」落在区间内
+//  时间戳缺失时回落到 最后更新 → 创建时间
+function pickTime(task, field) {
+  return task[field] || task.updatedAt || task.createdAt || '';
+}
+function inRange(iso, start, end) {
+  if (!iso) return true;   // 无任何时间信息时，视为命中（避免漏统计）
+  const t = new Date(iso);
+  if (isNaN(t.getTime())) return true;
+  return t >= start && t <= end;
+}
+// 返回 { counts, list } —— list 为命中区间的任务（用于明细导出/AI 汇报）
+function computeStats() {
   const startVal = document.getElementById('statsStart').value;
   const endVal = document.getElementById('statsEnd').value;
-  if (!startVal || !endVal) return;
-  const start = new Date(startVal + 'T00:00:00+08:00');
-  const end = new Date(endVal + 'T23:59:59+08:00');
+  const start = startVal ? new Date(startVal + 'T00:00:00+08:00') : new Date(0);
+  const end = endVal ? new Date(endVal + 'T23:59:59+08:00') : new Date();
   const counts = { pending: 0, processing: 0, completed: 0, cancelled: 0 };
+  const list = [];
   tasks.forEach(t => {
-    const created = new Date(t.createdAt);
-    if (created >= start && created <= end) {
+    let hit = false;
+    if (t.status === 'pending' || t.status === 'processing') {
+      hit = true;                                   // 存量：始终计入
+    } else if (t.status === 'completed') {
+      hit = inRange(pickTime(t, 'completedAt'), start, end);
+    } else if (t.status === 'cancelled') {
+      hit = inRange(pickTime(t, 'cancelledAt'), start, end);
+    }
+    if (hit) {
       if (counts.hasOwnProperty(t.status)) counts[t.status]++;
+      list.push(t);
     }
   });
-  const maxCount = Math.max(...Object.values(counts), 1);
-  ['pending', 'processing', 'completed', 'cancelled'].forEach(s => {
-    document.getElementById(`statsCount-${s}`).textContent = counts[s];
-    const pct = (counts[s] / maxCount) * 100;
-    document.getElementById(`statsBar-${s}`).style.height = pct + '%';
+  return { startVal, endVal, start, end, counts, list };
+}
+
+// ---- 单条 KPI 计算辅助 ----
+function _countCreated(s, e) { return tasks.filter(t => inRange(t.createdAt, s, e)).length; }
+function _countCompleted(s, e) { return tasks.filter(t => t.status === 'completed' && inRange(pickTime(t, 'completedAt'), s, e)).length; }
+function _countCancelled(s, e) { return tasks.filter(t => t.status === 'cancelled' && inRange(pickTime(t, 'cancelledAt'), s, e)).length; }
+function _countProcessingAt(when) {
+  return tasks.filter(t => {
+    if (!t.startedAt) return false;
+    const st = new Date(t.startedAt);
+    if (isNaN(st.getTime()) || st > when) return false;
+    const done = t.completedAt ? new Date(t.completedAt) : null;
+    return !done || done > when;
+  }).length;
+}
+function _totalAt(when) { return tasks.filter(t => inRange(t.createdAt, new Date(0), when)).length; }
+function _avgHours(s, e) {
+  let sum = 0, n = 0;
+  tasks.forEach(t => {
+    if (t.status !== 'completed') return;
+    if (!inRange(pickTime(t, 'completedAt'), s, e)) return;
+    if (!t.startedAt || !t.completedAt) return;
+    const ms = new Date(t.completedAt) - new Date(t.startedAt);
+    if (ms > 0) { sum += ms; n++; }
+  });
+  return n ? sum / n / 3600000 : 0;
+}
+function _onTimeRate(s, e) {
+  const done = tasks.filter(t => t.status === 'completed' && inRange(pickTime(t, 'completedAt'), s, e));
+  if (!done.length) return null;
+  const ok = done.filter(t => {
+    if (!t.dueDate) return true;               // 无截止时间视为按时
+    const due = new Date(t.dueDate + 'T23:59:59');
+    const cmp = new Date(pickTime(t, 'completedAt'));
+    return isNaN(due.getTime()) || cmp <= due;
+  }).length;
+  return Math.round((ok / done.length) * 100);
+}
+function _overdueAt(when) {
+  return tasks.filter(t => {
+    if (t.status === 'completed' || t.status === 'cancelled') return false;
+    if (!t.dueDate) return false;
+    const d = new Date(t.dueDate + 'T23:59:59');
+    return !isNaN(d.getTime()) && d < when;
+  }).length;
+}
+
+// 8 个核心 KPI（含与上一周期对比）
+function computeKpis() {
+  const { start, end } = computeStats();
+  const len = Math.max(1, end - start);
+  const pEnd = new Date(start.getTime() - 1);
+  const pStart = new Date(start.getTime() - len);
+  const now = new Date();
+
+  const mk = (key, label, icon, cur, prev, opts) => ({
+    key, label, icon,
+    cur: cur == null ? 0 : cur,
+    prev: prev == null ? 0 : prev,
+    unit: (opts && opts.unit) || '',
+    betterWhen: (opts && opts.betterWhen) || 'none',
+    tone: (opts && opts.tone) || 't-blue',
+    decimals: (opts && opts.decimals) || 0
+  });
+
+  return [
+    mk('total', '任务总数', ICON_KPI.box, _totalAt(end), _totalAt(pEnd), { tone: 't-blue' }),
+    mk('created', '新增任务', ICON_KPI.plus, _countCreated(start, end), _countCreated(pStart, pEnd), { tone: 't-indigo' }),
+    mk('done', '完成任务', ICON_KPI.check, _countCompleted(start, end), _countCompleted(pStart, pEnd), { tone: 't-green' }),
+    mk('cancelled', '取消任务', ICON_KPI.x, _countCancelled(start, end), _countCancelled(pStart, pEnd), { tone: 't-gray' }),
+    mk('avg', '平均处理时长', ICON_KPI.clock, _avgHours(start, end), _avgHours(pStart, pEnd),
+       { unit: 'h', betterWhen: 'down', decimals: 1, tone: 't-sky' }),
+    mk('ontime', '按时完成率', ICON_KPI.shield, _onTimeRate(start, end), _onTimeRate(pStart, pEnd),
+       { unit: '%', betterWhen: 'up', tone: 't-purple' }),
+    mk('overdue', '超期任务', ICON_KPI.alert, _overdueAt(now), _overdueAt(pEnd), { betterWhen: 'down', tone: 't-red' }),
+    mk('processing', '当前处理中', ICON_KPI.play, _countProcessingAt(now), _countProcessingAt(pEnd), { tone: 't-pink' })
+  ];
+}
+
+function renderKpis() {
+  const grid = document.getElementById('kpiGrid');
+  if (!grid) return;
+  const list = computeKpis();
+  grid.innerHTML = list.map(k => {
+    const cur = k.decimals ? Number(k.cur).toFixed(k.decimals) : Math.round(k.cur);
+    const diff = k.cur - k.prev;
+    const absDiff = k.decimals ? Math.abs(diff).toFixed(k.decimals) : Math.round(Math.abs(diff));
+    let cls = 'flat', arrow = '—';
+    if (Math.abs(diff) > 1e-9) {
+      const up = diff > 0;
+      arrow = up ? '↑' : '↓';
+      if (k.betterWhen === 'none') cls = 'flat';
+      else cls = ((k.betterWhen === 'up') === up) ? 'up' : 'down';
+    }
+    const deltaTxt = Math.abs(diff) <= 1e-9
+      ? '<span class="flat">— 与上期持平</span>'
+      : `<span class="${cls}">${arrow} ${absDiff}${k.unit}</span><span>较上期</span>`;
+    return `<div class="kpi">
+        <div class="kpi-top"><span class="kpi-ic ${k.tone}">${k.icon}</span><span class="kpi-label">${escHtml(k.label)}</span></div>
+        <div class="kpi-val">${cur}<span class="unit">${k.unit}</span></div>
+        <div class="kpi-delta">${deltaTxt}</div>
+      </div>`;
+  }).join('');
+}
+
+// KPI 图标
+const ICON_KPI = {
+  box:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5 12 3.5l8 4v9L12 20.5l-8-4z"/><path d="M4 7.5 12 11.5l8-4M12 11.5v9"/></svg>',
+  plus:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6.5 9.5 17 4 11.5"/></svg>',
+  x:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+  shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v6c0 4 3 7 7 9 4-2 7-5 7-9V6z"/><path d="M9.5 12l1.8 1.8L15 10"/></svg>',
+  alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5 3 19.5h18z"/><path d="M12 10v4.5M12 17.4h.01"/></svg>',
+  play:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M10.5 8.8 15 12l-4.5 3.2z"/></svg>'
+};
+
+// ---- 任务趋势折线图（自绘 SVG，无第三方依赖） ----
+const TREND_SERIES = [
+  { key: 'created',   name: '新增任务',   color: 'var(--st-pending)' },
+  { key: 'completed', name: '完成任务',   color: 'var(--st-completed)' },
+  { key: 'progress',  name: '处理中任务', color: 'var(--st-processing)' }
+];
+
+function computeTrend() {
+  const trendSel = document.getElementById('trendRange');
+  const rng = calcQuickRange(trendSel ? trendSel.value : 'week');
+  const start = rng.start, end = rng.end;
+  const days = [];
+  const oneDay = 86400000;
+  let cur = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  let guard = 0;
+  while (cur <= last && guard < 400) {
+    const dayStart = new Date(cur.getTime());
+    const dayEnd = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate(), 23, 59, 59, 999);
+    days.push({
+      date: new Date(cur.getTime()),
+      created: tasks.filter(t => inRange(t.createdAt, dayStart, dayEnd)).length,
+      completed: tasks.filter(t => t.status === 'completed' && inRange(pickTime(t, 'completedAt'), dayStart, dayEnd)).length,
+      progress: _countProcessingAt(dayEnd)
+    });
+    cur = new Date(cur.getTime() + oneDay);
+    guard++;
+  }
+  return days;
+}
+
+function renderTrendChart() {
+  const svg = document.getElementById('trendChart');
+  if (!svg) return;
+  const wrap = svg.parentElement;
+  const W = Math.max(280, wrap.clientWidth || 420);
+  const H = Math.max(110, wrap.clientHeight || 150);
+  const padL = 30, padR = 10, padT = 10, padB = 24;
+  const days = computeTrend();
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('width', W);
+  svg.setAttribute('height', H);
+  svg.innerHTML = '';
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (tag, attrs) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
+
+  const maxV = Math.max(1, ...days.flatMap(d => [d.created, d.completed, d.progress]));
+  const yMax = maxV <= 4 ? 4 : Math.ceil(maxV / 2) * 2;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+  const xAt = i => days.length <= 1 ? padL + innerW / 2 : padL + (i * innerW) / (days.length - 1);
+  const yAt = v => padT + innerH - (v / yMax) * innerH;
+
+  // 网格 + Y 轴刻度
+  const ticks = 4;
+  for (let i = 0; i <= ticks; i++) {
+    const v = (yMax / ticks) * i;
+    const y = yAt(v);
+    svg.appendChild(el('line', { x1: padL, y1: y, x2: W - padR, y2: y, stroke: 'var(--bd-soft)', 'stroke-width': 1 }));
+    const t = el('text', { x: padL - 7, y: y + 3.5, 'text-anchor': 'end', 'font-size': 10, fill: 'var(--text-3)' });
+    t.textContent = String(Math.round(v));
+    svg.appendChild(t);
+  }
+
+  // X 轴标签（超过 10 天则抽样显示）
+  const step = days.length > 10 ? Math.ceil(days.length / 7) : 1;
+  days.forEach((d, i) => {
+    if (i % step !== 0 && i !== days.length - 1) return;
+    const t = el('text', { x: xAt(i), y: H - 7, 'text-anchor': 'middle', 'font-size': 10, fill: 'var(--text-3)' });
+    t.textContent = String(d.date.getMonth() + 1).padStart(2, '0') + '/' + String(d.date.getDate()).padStart(2, '0');
+    svg.appendChild(t);
+  });
+
+  // 三条折线 + 圆点
+  TREND_SERIES.forEach(s => {
+    const pts = days.map((d, i) => [xAt(i), yAt(d[s.key])]);
+    if (pts.length) {
+      svg.appendChild(el('polyline', {
+        points: pts.map(p => p.join(',')).join(' '),
+        fill: 'none', stroke: s.color, 'stroke-width': 2,
+        'stroke-linejoin': 'round', 'stroke-linecap': 'round'
+      }));
+      pts.forEach(p => svg.appendChild(el('circle', {
+        cx: p[0], cy: p[1], r: 2.6, fill: 'var(--surface)', stroke: s.color, 'stroke-width': 2
+      })));
+    }
+  });
+
+  // 悬停热区 + tooltip
+  const tip = document.getElementById('chartTip');
+  days.forEach((d, i) => {
+    const bandW = days.length <= 1 ? innerW : innerW / (days.length - 1);
+    const band = el('rect', {
+      x: xAt(i) - bandW / 2, y: padT, width: bandW, height: innerH,
+      fill: 'transparent', style: 'cursor:crosshair'
+    });
+    band.addEventListener('mouseenter', () => {
+      if (!tip) return;
+      const dt = d.date;
+      tip.innerHTML = `<b>${dt.getMonth() + 1}/${dt.getDate()}</b><br>`
+        + `新增 ${d.created}　完成 ${d.completed}　处理中 ${d.progress}`;
+      tip.classList.add('show');
+      const tw = tip.offsetWidth || 150;
+      let left = xAt(i) - tw / 2;
+      left = Math.max(0, Math.min(left, W - tw));
+      tip.style.left = left + 'px';
+      tip.style.top = '6px';
+    });
+    band.addEventListener('mouseleave', () => { if (tip) tip.classList.remove('show'); });
+    svg.appendChild(band);
   });
 }
+
+// 让看板区域底部避让固定在屏幕底部的统计面板（随面板实际高度自适应）
+function syncStatsHeight() {
+  const sec = document.querySelector('.stats-section');
+  const page = document.querySelector('.page');
+  if (!sec || !page) return;
+  const h = sec.offsetHeight || 0;
+  page.style.paddingBottom = (h + 16) + 'px';
+}
+
+function renderStats() {
+  renderKpis();
+  renderTrendChart();
+  syncStatsHeight();
+}
+
+
 
 // CSV 单元格转义：把内部双引号转义为两个双引号，并整体用双引号包裹。
 // 这样描述里的逗号、双引号、换行都能被 Excel 正确解析（换行按标准 CSV 保留）。
@@ -1617,35 +2891,33 @@ function csvCell(v) {
 }
 
 function exportStatsCSV() {
-  const startVal = document.getElementById('statsStart').value;
-  const endVal = document.getElementById('statsEnd').value;
-  const start = startVal ? new Date(startVal + 'T00:00:00+08:00') : new Date(0);
-  const end = endVal ? new Date(endVal + 'T23:59:59+08:00') : new Date();
-  const counts = { pending: 0, processing: 0, completed: 0, cancelled: 0 };
-  const details = [];
-  tasks.forEach(t => {
-    const created = new Date(t.createdAt);
-    if (created >= start && created <= end) {
-      if (counts.hasOwnProperty(t.status)) counts[t.status]++;
-      details.push({
-        id: t.id, title: t.title, description: t.description || '',
-        status: STATUS_LABELS[t.status],
-        source: t.source, createdAt: formatTime(t.createdAt),
-        cancelReason: t.cancelReason || ''
-      });
-    }
-  });
+  const { startVal, endVal, counts, list } = computeStats();
+  const details = list.map(t => ({
+    id: t.id,
+    title: t.title,
+    description: t.description || '',
+    status: STATUS_LABELS[t.status],
+    source: t.source,
+    createdAt: formatTime(t.createdAt),
+    startedAt: t.startedAt ? formatTime(t.startedAt) : '',
+    completedAt: t.completedAt ? formatTime(t.completedAt) : '',
+    cancelledAt: t.cancelledAt ? formatTime(t.cancelledAt) : '',
+    updatedAt: formatTime(t.updatedAt),
+    cancelReason: t.cancelReason || ''
+  }));
   let csv = '\uFEFF'; // BOM for Excel
-  csv += csvCell('统计时间段') + ',' + csvCell((startVal || '全部') + ' ~ ' + (endVal || '全部')) + '\n\n';
+  csv += csvCell('统计时间段') + ',' + csvCell((startVal || '全部') + ' ~ ' + (endVal || '全部')) + '\n';
+  csv += csvCell('统计口径') + ',' + csvCell('待处理/处理中=当前存量；已完成=按完成时间；已取消=按取消时间') + '\n\n';
   csv += csvCell('状态') + ',' + csvCell('数量') + '\n';
   csv += csvCell('待处理') + ',' + csvCell(counts.pending) + '\n';
   csv += csvCell('处理中') + ',' + csvCell(counts.processing) + '\n';
   csv += csvCell('已完成') + ',' + csvCell(counts.completed) + '\n';
   csv += csvCell('已取消') + ',' + csvCell(counts.cancelled) + '\n';
   csv += '\n' + csvCell('任务明细') + '\n';
-  csv += ['任务编号', '标题', '任务描述', '状态', '客户来源', '创建时间', '取消原因'].map(csvCell).join(',') + '\n';
+  csv += ['任务编号', '标题', '任务描述', '状态', '客户来源', '创建时间', '启动时间', '完成时间', '取消时间', '最后更新', '取消原因'].map(csvCell).join(',') + '\n';
   details.forEach(d => {
-    csv += [d.id, d.title, d.description, d.status, d.source, d.createdAt, d.cancelReason].map(csvCell).join(',') + '\n';
+    csv += [d.id, d.title, d.description, d.status, d.source, d.createdAt,
+            d.startedAt, d.completedAt, d.cancelledAt, d.updatedAt, d.cancelReason].map(csvCell).join(',') + '\n';
   });
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -1840,22 +3112,9 @@ async function clearAiKey() {
   }
 }
 
-// ---- 收集当前统计区间的任务数据 ----
+// ---- 收集当前统计区间的任务数据（口径与统计面板一致） ----
 function collectReportData() {
-  const startVal = document.getElementById('statsStart').value;
-  const endVal = document.getElementById('statsEnd').value;
-  const start = startVal ? new Date(startVal + 'T00:00:00+08:00') : new Date(0);
-  const end = endVal ? new Date(endVal + 'T23:59:59+08:00') : new Date();
-  const counts = { pending: 0, processing: 0, completed: 0, cancelled: 0 };
-  const list = [];
-  tasks.forEach(t => {
-    const created = new Date(t.createdAt);
-    if (created >= start && created <= end) {
-      if (counts.hasOwnProperty(t.status)) counts[t.status]++;
-      list.push(t);
-    }
-  });
-  return { startVal, endVal, counts, list };
+  return computeStats();
 }
 
 // ---- 点击「AI 整理汇报」：写入数据并在新标签页打开 report.html ----
@@ -1908,6 +3167,84 @@ function setupEventListeners() {
   if (regPass) regPass.addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
   // Logout
   document.getElementById('logoutBtn').addEventListener('click', doLogout);
+  // 主题切换
+  const themeBtn = document.getElementById('themeToggleBtn');
+  if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+
+  // 搜索与筛选
+  ['filterSearch', 'globalSearch'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', e => {
+      const f = document.getElementById('filterSearch');
+      if (f && f.value !== e.target.value) f.value = e.target.value;
+      renderColumns();
+    });
+  });
+  ['filterDept', 'filterAssignee', 'filterPriority', 'filterStatus'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', renderColumns);
+  });
+
+  // 用户下拉菜单
+  const userTrigger = document.getElementById('userTrigger');
+  const userDropdown = document.getElementById('userDropdown');
+  if (userTrigger && userDropdown) {
+    userTrigger.addEventListener('click', e => {
+      e.stopPropagation();
+      userDropdown.classList.toggle('show');
+      if (typeof closeCardMenus === 'function') closeCardMenus();
+    });
+  }
+  const bindClick = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+  bindClick('ddAiSettings', () => { if (userDropdown) userDropdown.classList.remove('show'); openAiSettings(); });
+  bindClick('ddTheme', () => { if (userDropdown) userDropdown.classList.remove('show'); toggleTheme(); });
+  bindClick('ddExport', () => { if (userDropdown) userDropdown.classList.remove('show'); exportStatsCSV(); });
+
+  // 看板 / 列表 视图切换（列表模式在后续阶段实现）
+  const vb = document.getElementById('viewBoardBtn');
+  const vl = document.getElementById('viewListBtn');
+  if (vb && vl) {
+    vb.addEventListener('click', () => {
+      vb.classList.add('active'); vl.classList.remove('active');
+      document.getElementById('kanbanView').style.display = '';
+      document.getElementById('listView').style.display = 'none';
+    });
+    vl.addEventListener('click', () => {
+      vl.classList.add('active'); vb.classList.remove('active');
+      document.getElementById('kanbanView').style.display = 'none';
+      const lv = document.getElementById('listView');
+      lv.style.display = '';
+      lv.innerHTML = '<div class="empty-state" style="padding:64px 16px">'
+        + '<div class="t">列表模式</div><div class="s">表格视图将在下一阶段实现</div></div>';
+    });
+  }
+
+  // 已完成列：查看全部 / 收起
+  // 趋势图独立周期
+  const tr = document.getElementById('trendRange');
+  if (tr) tr.addEventListener('change', renderTrendChart);
+
+  // 日期范围变化即刷新（已移除「查询」按钮）
+  ['statsStart', 'statsEnd'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => { clearQuickRangeActive(); renderStats(); });
+  });
+
+  // 任务详情 Drawer：关闭按钮 + Esc
+  const dClose = document.getElementById('drawerClose');
+  if (dClose) dClose.addEventListener('click', closeTaskDrawer);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeTaskDrawer();
+  });
+
+  const sac = document.getElementById('showAllCompleted');
+  if (sac) sac.addEventListener('click', toggleShowAllCompleted);
+
+  // 点击空白处关闭下拉与卡片菜单
+  document.addEventListener('click', () => {
+    if (userDropdown) userDropdown.classList.remove('show');
+    if (typeof closeCardMenus === 'function') closeCardMenus();
+  });
   // AI 设置与汇报（汇报展示在独立页面 report.html）
   document.getElementById('aiSettingsBtn').addEventListener('click', openAiSettings);
   document.getElementById('aiSaveBtn').addEventListener('click', saveAiSettings);
@@ -1916,22 +3253,33 @@ function setupEventListeners() {
   document.getElementById('aiReportBtn').addEventListener('click', onAiReportClick);
   // New task
   document.getElementById('btnNewTask').addEventListener('click', () => {
-    document.getElementById('newTaskTitle').value = '';
-    document.getElementById('newTaskDesc').value = '';
-    document.getElementById('newTaskSource').value = '';
+    ['newTaskTitle', 'newTaskDesc', 'newTaskSource', 'newTaskDept',
+     'newTaskAssignee', 'newTaskDue', 'newTaskTags'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    const pr = document.getElementById('newTaskPriority');
+    if (pr) pr.value = 'P2';
     openModal('modalNewTask');
     setTimeout(() => document.getElementById('newTaskTitle').focus(), 100);
   });
   document.getElementById('confirmNewTask').addEventListener('click', () => {
     const title = document.getElementById('newTaskTitle').value.trim();
     if (!title) {
-      document.getElementById('newTaskTitle').style.borderColor = '#ff6b6b';
-      document.getElementById('newTaskTitle').placeholder = '请输入任务标题（必填）';
+      document.getElementById('newTaskTitle').style.borderColor = 'var(--danger)';
+      document.getElementById('newTaskTitle').placeholder = '请输入任务名称（必填）';
       return;
     }
     const desc = document.getElementById('newTaskDesc').value.trim();
     const source = document.getElementById('newTaskSource').value.trim();
-    createTask(title, desc, source);
+    const tagsRaw = document.getElementById('newTaskTags').value.trim();
+    createTask(title, desc, source, {
+      priority: document.getElementById('newTaskPriority').value || 'P2',
+      assignee: document.getElementById('newTaskAssignee').value,
+      department: document.getElementById('newTaskDept').value,
+      dueDate: document.getElementById('newTaskDue').value || '',
+      tags: tagsRaw ? tagsRaw.split(/[,，]/).map(s => s.trim()).filter(Boolean) : []
+    });
     closeModal('modalNewTask');
   });
   document.getElementById('newTaskTitle').addEventListener('input', () => {
@@ -1946,10 +3294,9 @@ function setupEventListeners() {
     document.getElementById('cancelReasonInput').style.borderColor = '';
   });
   // Statistics
-  document.getElementById('statsQuery').addEventListener('click', renderStats);
   document.getElementById('statsExport').addEventListener('click', exportStatsCSV);
   // 快捷周期按钮：点击后立即刷新统计
-  document.querySelectorAll('.quick-range-btn').forEach(btn => {
+  document.querySelectorAll('.tab').forEach(btn => {
     btn.addEventListener('click', () => setQuickRange(btn.dataset.range));
   });
   // 手动修改日期时，取消快捷按钮的激活态（表示自定义区间）
