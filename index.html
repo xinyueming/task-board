@@ -218,7 +218,7 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
 .dropdown-head .sub { font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
 
 /* ===== 页面主体 ===== */
-.page { flex: 1; padding: var(--sp-5) var(--sp-6) 210px; }
+.page { flex: 1; padding: var(--sp-5) var(--sp-6) var(--sp-5); }
 .page-head {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: var(--sp-4); gap: var(--sp-4);
@@ -579,7 +579,7 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
   .search-box { width: 260px; }
 }
 @media (max-width: 1280px) {
-  .page { padding: var(--sp-4) var(--sp-4) 230px; }
+  .page { padding: var(--sp-4); }
   .stats-panel { padding: var(--sp-3) var(--sp-4) var(--sp-4); }
   .stats-body { gap: var(--sp-4); }
   .header { padding: 0 var(--sp-4); }
@@ -592,6 +592,107 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
   .stats-body { grid-template-columns: repeat(2, 1fr); }
   .stats-scope-hint { display: none; }
   .modal-grid { grid-template-columns: 1fr; }
+}
+
+
+/* ============================================================
+   阶段 2：任务统计与分析（KPI + 趋势图 + AI 周报）
+   ============================================================ */
+.stats-section {
+  display: grid; grid-template-columns: minmax(0, 1fr) 280px;
+  gap: var(--sp-4); padding: var(--sp-5) var(--sp-6) var(--sp-6);
+  border-top: 1px solid var(--bd);
+  background: var(--surface);
+}
+.stats-main { min-width: 0; }
+.stats-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--sp-4); margin-bottom: var(--sp-2); flex-wrap: wrap;
+}
+.stats-toolbar h3 { font-size: 15px; font-weight: 650; color: var(--text); white-space: nowrap; }
+.range-sep { color: var(--text-3); font-size: 12px; }
+.stats-scope-hint { font-size: 11.5px; color: var(--text-3); margin-bottom: var(--sp-4); }
+
+/* KPI 卡片 */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-4); }
+.kpi {
+  background: var(--surface); border: 1px solid var(--bd); border-radius: var(--r-card);
+  padding: var(--sp-3) var(--sp-4); box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--t), border-color var(--t);
+}
+.kpi:hover { box-shadow: var(--shadow); }
+.kpi-top { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; }
+.kpi-ic {
+  width: 26px; height: 26px; border-radius: 7px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--primary-weak); color: var(--primary);
+}
+.kpi-ic svg { width: 14px; height: 14px; }
+.kpi-label { font-size: 12px; color: var(--text-2); font-weight: 500; }
+.kpi-val { font-size: 24px; font-weight: 700; color: var(--text); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpi-val .unit { font-size: 14px; font-weight: 600; margin-left: 2px; color: var(--text-2); }
+.kpi-delta { font-size: 11.5px; color: var(--text-3); margin-top: 5px; display: flex; align-items: center; gap: 4px; }
+.kpi-delta .up { color: var(--st-completed); font-weight: 600; }
+.kpi-delta .down { color: var(--danger); font-weight: 600; }
+.kpi-delta .flat { color: var(--text-3); font-weight: 600; }
+
+/* 趋势图 */
+.chart-card {
+  background: var(--surface); border: 1px solid var(--bd); border-radius: var(--r-card);
+  padding: var(--sp-4); box-shadow: var(--shadow-sm);
+}
+.chart-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-2); }
+.chart-title { font-size: 13.5px; font-weight: 650; color: var(--text); }
+.chart-legend { display: flex; gap: var(--sp-4); flex-wrap: wrap; }
+.chart-legend .lg { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-2); }
+.chart-legend .lg i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.chart-wrap { position: relative; }
+.trend-chart { display: block; width: 100%; height: 190px; overflow: visible; }
+.chart-tip {
+  position: absolute; pointer-events: none; display: none; z-index: 5;
+  background: var(--text); color: var(--surface); font-size: 11.5px; line-height: 1.6;
+  padding: 7px 10px; border-radius: 7px; box-shadow: var(--shadow-lg); white-space: nowrap;
+}
+.chart-tip.show { display: block; }
+
+/* 右侧 AI 区 */
+.ai-side { display: flex; flex-direction: column; gap: var(--sp-3); }
+.ai-card {
+  background: var(--primary-weak);
+  border: 1px solid var(--bd); border-radius: var(--r-card);
+  padding: var(--sp-4); box-shadow: var(--shadow-sm);
+}
+.ai-card-title { font-size: 14px; font-weight: 650; color: var(--text); margin-bottom: 6px; }
+.ai-card-desc { font-size: 12px; color: var(--text-2); line-height: 1.6; margin-bottom: var(--sp-4); }
+.ai-gen-btn {
+  width: 100%; height: 38px; border: none; border-radius: var(--r-ctl);
+  background: var(--primary); color: var(--on-primary); font-size: 13.5px; font-weight: 600;
+  cursor: pointer; transition: filter var(--t);
+}
+.ai-gen-btn:hover { filter: brightness(1.07); }
+.ai-gen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.side-links { display: flex; flex-direction: column; gap: 6px; }
+.side-links button {
+  display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
+  padding: 10px 13px; border: 1px solid var(--bd); border-radius: var(--r-ctl);
+  background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all var(--t);
+}
+.side-links button:hover { background: var(--hover); color: var(--text); }
+.side-links .ic { font-size: 13px; color: var(--text-3); width: 14px; text-align: center; }
+
+@media (max-width: 1280px) {
+  .stats-section { grid-template-columns: 1fr; padding: var(--sp-4); }
+  .kpi-grid { gap: var(--sp-2); }
+  .ai-side { flex-direction: row; align-items: stretch; }
+  .ai-card { flex: 1; }
+  .side-links { flex: 1; flex-direction: row; flex-wrap: wrap; }
+  .side-links button { width: auto; flex: 1; }
+}
+@media (max-width: 900px) {
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ai-side { flex-direction: column; }
+  .side-links { flex-direction: column; }
 }
 
 </style>
@@ -761,51 +862,59 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
     <div id="listView" style="display:none"></div>
   </div>
 
-  <!-- Statistics Panel -->
-  <div class="stats-panel">
-    <div class="stats-header">
-      <h3>任务统计与分析</h3>
-      <div class="stats-controls">
-        <div class="quick-ranges">
-          <button class="quick-range-btn" data-range="week">近一周</button>
-          <button class="quick-range-btn" data-range="month">近一月</button>
-          <button class="quick-range-btn" data-range="quarter">近三月</button>
-          <button class="quick-range-btn" data-range="halfyear">近半年</button>
-          <button class="quick-range-btn" data-range="year">近一年</button>
+  <!-- 任务统计与分析 -->
+  <section class="stats-section">
+    <div class="stats-main">
+      <div class="stats-toolbar">
+        <h3>任务统计与分析</h3>
+        <div class="stats-controls">
+          <div class="quick-ranges">
+            <button class="quick-range-btn" data-range="week">近一周</button>
+            <button class="quick-range-btn" data-range="month">近一月</button>
+            <button class="quick-range-btn" data-range="quarter">近三月</button>
+            <button class="quick-range-btn" data-range="halfyear">近半年</button>
+            <button class="quick-range-btn" data-range="year">近一年</button>
+          </div>
+          <input type="date" id="statsStart">
+          <span class="range-sep">～</span>
+          <input type="date" id="statsEnd">
+          <button class="stats-query-btn" id="statsQuery">查询</button>
         </div>
-        <label>从</label>
-        <input type="date" id="statsStart">
-        <label>到</label>
-        <input type="date" id="statsEnd">
-        <button class="stats-query-btn" id="statsQuery">查询</button>
-        <button class="btn-ai-report" id="aiReportBtn">✨ AI 任务周报</button>
-        <button class="stats-export-btn" id="statsExport">导出 CSV</button>
+      </div>
+      <div class="stats-scope-hint">待处理 / 处理中为当前存量（不受区间限制）；已完成按完成时间、已取消按取消时间统计</div>
+
+      <div class="kpi-grid" id="kpiGrid"></div>
+
+      <div class="chart-card">
+        <div class="chart-head">
+          <span class="chart-title">任务趋势</span>
+          <div class="chart-legend">
+            <span class="lg"><i style="background:var(--st-pending)"></i>新增任务</span>
+            <span class="lg"><i style="background:var(--st-completed)"></i>完成任务</span>
+            <span class="lg"><i style="background:var(--st-processing)"></i>处理中任务</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <svg id="trendChart" class="trend-chart" preserveAspectRatio="none"></svg>
+          <div class="chart-tip" id="chartTip"></div>
+        </div>
       </div>
     </div>
-    <div class="stats-scope-hint">待处理 / 处理中为当前存量（不受区间限制）；已完成按完成时间、已取消按取消时间统计</div>
-    <div class="stats-body" id="statsBody">
-      <div class="stat-bar-group bar-pending">
-        <div class="stat-bar-count" id="statsCount-pending">0</div>
-        <div class="stat-bar-track"><div class="stat-bar-fill" id="statsBar-pending"></div></div>
-        <div class="stat-bar-label">待处理</div>
+
+    <aside class="ai-side">
+      <div class="ai-card">
+        <div class="ai-card-title">✨ AI 任务周报</div>
+        <p class="ai-card-desc">基于当前任务数据，生成本周任务汇报</p>
+        <button class="ai-gen-btn" id="aiReportBtn">生成周报 →</button>
       </div>
-      <div class="stat-bar-group bar-processing">
-        <div class="stat-bar-count" id="statsCount-processing">0</div>
-        <div class="stat-bar-track"><div class="stat-bar-fill" id="statsBar-processing"></div></div>
-        <div class="stat-bar-label">处理中</div>
+      <div class="side-links">
+        <button id="statsExport"><span class="ic">⬇</span>导出 CSV</button>
+        <button id="sideSettings"><span class="ic">⚙</span>任务设置</button>
+        <button id="sideHelp"><span class="ic">?</span>帮助中心</button>
       </div>
-      <div class="stat-bar-group bar-completed">
-        <div class="stat-bar-count" id="statsCount-completed">0</div>
-        <div class="stat-bar-track"><div class="stat-bar-fill" id="statsBar-completed"></div></div>
-        <div class="stat-bar-label">已完成</div>
-      </div>
-      <div class="stat-bar-group bar-cancelled">
-        <div class="stat-bar-count" id="statsCount-cancelled">0</div>
-        <div class="stat-bar-track"><div class="stat-bar-fill" id="statsBar-cancelled"></div></div>
-        <div class="stat-bar-label">已取消</div>
-      </div>
-    </div>
-  </div>
+    </aside>
+  </section>
+
 </div>
 
 
@@ -1520,6 +1629,22 @@ function renderColumns() {
     }
   });
   const moreBtn = document.getElementById('showAllCompleted');
+  // 侧栏：任务设置 / 帮助中心（占位）
+  const ss = document.getElementById('sideSettings');
+  if (ss) ss.addEventListener('click', () => {
+    alert('任务设置：可用于配置默认部门、负责人候选等（后续阶段实现）');
+  });
+  const sh = document.getElementById('sideHelp');
+  if (sh) sh.addEventListener('click', () => {
+    alert('帮助中心\n\n· 拖拽卡片可改变任务状态\n· 点击卡片查看详情\n· 卡片右下 ⋯ 可复制/移动/删除\n· 底部可切换统计周期并生成 AI 周报');
+  });
+
+  // 图表随窗口宽度自适应
+  let rzTimer = null;
+  window.addEventListener('resize', () => {
+    if (rzTimer) clearTimeout(rzTimer);
+    rzTimer = setTimeout(() => { try { renderTrendChart(); } catch (e) {} }, 180);
+  });
   if (moreBtn) moreBtn.textContent = showAllCompleted ? '收起 ←' : '查看全部 →';
 }
 
@@ -2176,18 +2301,242 @@ function computeStats() {
       list.push(t);
     }
   });
-  return { startVal, endVal, counts, list };
+  return { startVal, endVal, start, end, counts, list };
+}
+
+// ---- 单条 KPI 计算辅助 ----
+function _countCreated(s, e) { return tasks.filter(t => inRange(t.createdAt, s, e)).length; }
+function _countCompleted(s, e) { return tasks.filter(t => t.status === 'completed' && inRange(pickTime(t, 'completedAt'), s, e)).length; }
+function _countCancelled(s, e) { return tasks.filter(t => t.status === 'cancelled' && inRange(pickTime(t, 'cancelledAt'), s, e)).length; }
+function _countProcessingAt(when) {
+  return tasks.filter(t => {
+    if (!t.startedAt) return false;
+    const st = new Date(t.startedAt);
+    if (isNaN(st.getTime()) || st > when) return false;
+    const done = t.completedAt ? new Date(t.completedAt) : null;
+    return !done || done > when;
+  }).length;
+}
+function _totalAt(when) { return tasks.filter(t => inRange(t.createdAt, new Date(0), when)).length; }
+function _avgHours(s, e) {
+  let sum = 0, n = 0;
+  tasks.forEach(t => {
+    if (t.status !== 'completed') return;
+    if (!inRange(pickTime(t, 'completedAt'), s, e)) return;
+    if (!t.startedAt || !t.completedAt) return;
+    const ms = new Date(t.completedAt) - new Date(t.startedAt);
+    if (ms > 0) { sum += ms; n++; }
+  });
+  return n ? sum / n / 3600000 : 0;
+}
+function _onTimeRate(s, e) {
+  const done = tasks.filter(t => t.status === 'completed' && inRange(pickTime(t, 'completedAt'), s, e));
+  if (!done.length) return null;
+  const ok = done.filter(t => {
+    if (!t.dueDate) return true;               // 无截止时间视为按时
+    const due = new Date(t.dueDate + 'T23:59:59');
+    const cmp = new Date(pickTime(t, 'completedAt'));
+    return isNaN(due.getTime()) || cmp <= due;
+  }).length;
+  return Math.round((ok / done.length) * 100);
+}
+function _overdueAt(when) {
+  return tasks.filter(t => {
+    if (t.status === 'completed' || t.status === 'cancelled') return false;
+    if (!t.dueDate) return false;
+    const d = new Date(t.dueDate + 'T23:59:59');
+    return !isNaN(d.getTime()) && d < when;
+  }).length;
+}
+
+// 8 个核心 KPI（含与上一周期对比）
+function computeKpis() {
+  const { start, end } = computeStats();
+  const len = Math.max(1, end - start);
+  const pEnd = new Date(start.getTime() - 1);
+  const pStart = new Date(start.getTime() - len);
+  const now = new Date();
+
+  const mk = (key, label, icon, cur, prev, opts) => ({
+    key, label, icon,
+    cur: cur == null ? 0 : cur,
+    prev: prev == null ? 0 : prev,
+    unit: (opts && opts.unit) || '',
+    betterWhen: (opts && opts.betterWhen) || 'none',
+    decimals: (opts && opts.decimals) || 0
+  });
+
+  return [
+    mk('total', '任务总数', ICON_KPI.box, _totalAt(end), _totalAt(pEnd)),
+    mk('created', '新增任务', ICON_KPI.plus, _countCreated(start, end), _countCreated(pStart, pEnd)),
+    mk('done', '完成任务', ICON_KPI.check, _countCompleted(start, end), _countCompleted(pStart, pEnd)),
+    mk('cancelled', '取消任务', ICON_KPI.x, _countCancelled(start, end), _countCancelled(pStart, pEnd)),
+    mk('avg', '平均处理时长', ICON_KPI.clock, _avgHours(start, end), _avgHours(pStart, pEnd),
+       { unit: 'h', betterWhen: 'down', decimals: 1 }),
+    mk('ontime', '按时完成率', ICON_KPI.shield, _onTimeRate(start, end), _onTimeRate(pStart, pEnd),
+       { unit: '%', betterWhen: 'up' }),
+    mk('overdue', '超期任务', ICON_KPI.alert, _overdueAt(now), _overdueAt(pEnd), { betterWhen: 'down' }),
+    mk('processing', '当前处理中', ICON_KPI.play, _countProcessingAt(now), _countProcessingAt(pEnd))
+  ];
+}
+
+function renderKpis() {
+  const grid = document.getElementById('kpiGrid');
+  if (!grid) return;
+  const list = computeKpis();
+  grid.innerHTML = list.map(k => {
+    const cur = k.decimals ? Number(k.cur).toFixed(k.decimals) : Math.round(k.cur);
+    const diff = k.cur - k.prev;
+    const absDiff = k.decimals ? Math.abs(diff).toFixed(k.decimals) : Math.round(Math.abs(diff));
+    let cls = 'flat', arrow = '—';
+    if (Math.abs(diff) > 1e-9) {
+      const up = diff > 0;
+      arrow = up ? '↑' : '↓';
+      if (k.betterWhen === 'none') cls = 'flat';
+      else cls = ((k.betterWhen === 'up') === up) ? 'up' : 'down';
+    }
+    const deltaTxt = Math.abs(diff) <= 1e-9
+      ? '<span class="flat">— 与上期持平</span>'
+      : `<span class="${cls}">${arrow} ${absDiff}${k.unit}</span><span>较上期</span>`;
+    return `<div class="kpi">
+        <div class="kpi-top"><span class="kpi-ic">${k.icon}</span><span class="kpi-label">${escHtml(k.label)}</span></div>
+        <div class="kpi-val">${cur}<span class="unit">${k.unit}</span></div>
+        <div class="kpi-delta">${deltaTxt}</div>
+      </div>`;
+  }).join('');
+}
+
+// KPI 图标
+const ICON_KPI = {
+  box:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5 12 3.5l8 4v9L12 20.5l-8-4z"/><path d="M4 7.5 12 11.5l8-4M12 11.5v9"/></svg>',
+  plus:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6.5 9.5 17 4 11.5"/></svg>',
+  x:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+  shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v6c0 4 3 7 7 9 4-2 7-5 7-9V6z"/><path d="M9.5 12l1.8 1.8L15 10"/></svg>',
+  alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5 3 19.5h18z"/><path d="M12 10v4.5M12 17.4h.01"/></svg>',
+  play:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M10.5 8.8 15 12l-4.5 3.2z"/></svg>'
+};
+
+// ---- 任务趋势折线图（自绘 SVG，无第三方依赖） ----
+const TREND_SERIES = [
+  { key: 'created',   name: '新增任务',   color: 'var(--st-pending)' },
+  { key: 'completed', name: '完成任务',   color: 'var(--st-completed)' },
+  { key: 'progress',  name: '处理中任务', color: 'var(--st-processing)' }
+];
+
+function computeTrend() {
+  const { start, end } = computeStats();
+  const days = [];
+  const oneDay = 86400000;
+  let cur = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  let guard = 0;
+  while (cur <= last && guard < 400) {
+    const dayStart = new Date(cur.getTime());
+    const dayEnd = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate(), 23, 59, 59, 999);
+    days.push({
+      date: new Date(cur.getTime()),
+      created: tasks.filter(t => inRange(t.createdAt, dayStart, dayEnd)).length,
+      completed: tasks.filter(t => t.status === 'completed' && inRange(pickTime(t, 'completedAt'), dayStart, dayEnd)).length,
+      progress: _countProcessingAt(dayEnd)
+    });
+    cur = new Date(cur.getTime() + oneDay);
+    guard++;
+  }
+  return days;
+}
+
+function renderTrendChart() {
+  const svg = document.getElementById('trendChart');
+  if (!svg) return;
+  const wrap = svg.parentElement;
+  const W = Math.max(320, wrap.clientWidth || 600);
+  const H = 190;
+  const padL = 30, padR = 10, padT = 10, padB = 24;
+  const days = computeTrend();
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('width', W);
+  svg.setAttribute('height', H);
+  svg.innerHTML = '';
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (tag, attrs) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
+
+  const maxV = Math.max(1, ...days.flatMap(d => [d.created, d.completed, d.progress]));
+  const yMax = maxV <= 4 ? 4 : Math.ceil(maxV / 2) * 2;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+  const xAt = i => days.length <= 1 ? padL + innerW / 2 : padL + (i * innerW) / (days.length - 1);
+  const yAt = v => padT + innerH - (v / yMax) * innerH;
+
+  // 网格 + Y 轴刻度
+  const ticks = 4;
+  for (let i = 0; i <= ticks; i++) {
+    const v = (yMax / ticks) * i;
+    const y = yAt(v);
+    svg.appendChild(el('line', { x1: padL, y1: y, x2: W - padR, y2: y, stroke: 'var(--bd-soft)', 'stroke-width': 1 }));
+    const t = el('text', { x: padL - 7, y: y + 3.5, 'text-anchor': 'end', 'font-size': 10, fill: 'var(--text-3)' });
+    t.textContent = String(Math.round(v));
+    svg.appendChild(t);
+  }
+
+  // X 轴标签（超过 10 天则抽样显示）
+  const step = days.length > 10 ? Math.ceil(days.length / 7) : 1;
+  days.forEach((d, i) => {
+    if (i % step !== 0 && i !== days.length - 1) return;
+    const t = el('text', { x: xAt(i), y: H - 7, 'text-anchor': 'middle', 'font-size': 10, fill: 'var(--text-3)' });
+    t.textContent = String(d.date.getMonth() + 1).padStart(2, '0') + '/' + String(d.date.getDate()).padStart(2, '0');
+    svg.appendChild(t);
+  });
+
+  // 三条折线 + 圆点
+  TREND_SERIES.forEach(s => {
+    const pts = days.map((d, i) => [xAt(i), yAt(d[s.key])]);
+    if (pts.length) {
+      svg.appendChild(el('polyline', {
+        points: pts.map(p => p.join(',')).join(' '),
+        fill: 'none', stroke: s.color, 'stroke-width': 2,
+        'stroke-linejoin': 'round', 'stroke-linecap': 'round'
+      }));
+      pts.forEach(p => svg.appendChild(el('circle', {
+        cx: p[0], cy: p[1], r: 2.6, fill: 'var(--surface)', stroke: s.color, 'stroke-width': 2
+      })));
+    }
+  });
+
+  // 悬停热区 + tooltip
+  const tip = document.getElementById('chartTip');
+  days.forEach((d, i) => {
+    const bandW = days.length <= 1 ? innerW : innerW / (days.length - 1);
+    const band = el('rect', {
+      x: xAt(i) - bandW / 2, y: padT, width: bandW, height: innerH,
+      fill: 'transparent', style: 'cursor:crosshair'
+    });
+    band.addEventListener('mouseenter', () => {
+      if (!tip) return;
+      const dt = d.date;
+      tip.innerHTML = `<b>${dt.getMonth() + 1}/${dt.getDate()}</b><br>`
+        + `新增 ${d.created}　完成 ${d.completed}　处理中 ${d.progress}`;
+      tip.classList.add('show');
+      const tw = tip.offsetWidth || 150;
+      let left = xAt(i) - tw / 2;
+      left = Math.max(0, Math.min(left, W - tw));
+      tip.style.left = left + 'px';
+      tip.style.top = '6px';
+    });
+    band.addEventListener('mouseleave', () => { if (tip) tip.classList.remove('show'); });
+    svg.appendChild(band);
+  });
 }
 
 function renderStats() {
-  const { counts } = computeStats();
-  const maxCount = Math.max(...Object.values(counts), 1);
-  ['pending', 'processing', 'completed', 'cancelled'].forEach(s => {
-    document.getElementById(`statsCount-${s}`).textContent = counts[s];
-    const pct = (counts[s] / maxCount) * 100;
-    document.getElementById(`statsBar-${s}`).style.height = pct + '%';
-  });
+  renderKpis();
+  renderTrendChart();
 }
+
+
 
 // CSV 单元格转义：把内部双引号转义为两个双引号，并整体用双引号包裹。
 // 这样描述里的逗号、双引号、换行都能被 Excel 正确解析（换行按标准 CSV 保留）。
