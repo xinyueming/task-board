@@ -596,58 +596,115 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
 
 
 /* ============================================================
-   阶段 2：任务统计与分析（KPI + 趋势图 + AI 周报）
+   阶段 2：任务统计与分析（三栏：统计 / 趋势 / AI）
    ============================================================ */
 .stats-section {
-  display: grid; grid-template-columns: minmax(0, 1fr) 280px;
-  gap: var(--sp-4); padding: var(--sp-5) var(--sp-6) var(--sp-6);
-  border-top: 1px solid var(--bd);
-  background: var(--surface);
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 0.7fr);
+  gap: var(--sp-4);
+  padding: var(--sp-5) var(--sp-6);
+  background: var(--bg);
+  align-items: start;
 }
-.stats-main { min-width: 0; }
-.stats-toolbar {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: var(--sp-4); margin-bottom: var(--sp-2); flex-wrap: wrap;
+.panel {
+  background: var(--surface); border: 1px solid var(--bd);
+  border-radius: var(--r-lg); padding: var(--sp-4);
+  box-shadow: var(--shadow-sm); min-width: 0;
 }
-.stats-toolbar h3 { font-size: 15px; font-weight: 650; color: var(--text); white-space: nowrap; }
-.range-sep { color: var(--text-3); font-size: 12px; }
-.stats-scope-hint { font-size: 11.5px; color: var(--text-3); margin-bottom: var(--sp-4); }
-
-/* KPI 卡片 */
-.kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-4); }
-.kpi {
-  background: var(--surface); border: 1px solid var(--bd); border-radius: var(--r-card);
-  padding: var(--sp-3) var(--sp-4); box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--t), border-color var(--t);
+.panel-head {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: var(--sp-4); flex-wrap: wrap;
 }
-.kpi:hover { box-shadow: var(--shadow); }
-.kpi-top { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; }
-.kpi-ic {
-  width: 26px; height: 26px; border-radius: 7px; flex: none;
+.panel-ic { font-size: 15px; }
+.panel-title { font-size: 14px; font-weight: 650; color: var(--text); white-space: nowrap; }
+.info-dot {
+  width: 15px; height: 15px; border-radius: 50%; flex: none;
+  border: 1px solid var(--text-3); color: var(--text-3);
+  font-size: 10px; font-style: italic; font-weight: 700; line-height: 1;
   display: inline-flex; align-items: center; justify-content: center;
-  background: var(--primary-weak); color: var(--primary);
+  cursor: help;
 }
-.kpi-ic svg { width: 14px; height: 14px; }
+.panel-head-right { margin-left: auto; display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+
+/* 周期 Tab（下划线样式） */
+.tabs { display: flex; align-items: center; gap: 2px; }
+.tab {
+  position: relative; padding: 6px 10px 8px; border: none; background: transparent;
+  color: var(--text-2); font-size: 12.5px; font-weight: 500; cursor: pointer;
+  border-bottom: 2px solid transparent; transition: color var(--t), border-color var(--t);
+  white-space: nowrap;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+/* 日期范围（合并为一个控件） */
+.date-range {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 34px; padding: 0 10px;
+  border: 1px solid var(--field-bd); border-radius: var(--r-ctl); background: var(--field);
+}
+.date-range svg { width: 14px; height: 14px; color: var(--text-3); flex: none; }
+.date-range .tilde { color: var(--text-3); font-size: 12px; }
+.date-range input[type="date"] {
+  border: none; background: transparent; color: var(--text);
+  font-size: 12.5px; outline: none; width: 104px; padding: 0;
+  font-variant-numeric: tabular-nums;
+}
+.date-range input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
+.date-range .chev-dn { width: 12px; height: 12px; color: var(--text-3); flex: none; }
+
+/* 迷你下拉 */
+.mini-select {
+  margin-left: auto; height: 32px; padding: 0 26px 0 10px;
+  border: 1px solid var(--field-bd); border-radius: var(--r-ctl); background: var(--field);
+  color: var(--text-2); font-size: 12.5px; cursor: pointer; outline: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2398A2B3' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 9px center;
+}
+.mini-select:hover { border-color: var(--text-3); }
+
+/* KPI 卡片（4 × 2，各自专属配色） */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-3); }
+.kpi {
+  border: 1px solid var(--bd); border-radius: var(--r-card);
+  padding: var(--sp-3); background: var(--surface);
+  transition: border-color var(--t), box-shadow var(--t);
+}
+.kpi:hover { border-color: var(--bd-soft); box-shadow: var(--shadow-sm); }
+.kpi-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.kpi-ic {
+  width: 28px; height: 28px; border-radius: 8px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--kpi-bg, var(--primary-weak)); color: var(--kpi-fg, var(--primary));
+}
+.kpi-ic svg { width: 15px; height: 15px; }
 .kpi-label { font-size: 12px; color: var(--text-2); font-weight: 500; }
-.kpi-val { font-size: 24px; font-weight: 700; color: var(--text); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpi-val {
+  font-size: 26px; font-weight: 700; color: var(--text);
+  line-height: 1.05; font-variant-numeric: tabular-nums; margin-bottom: 6px;
+}
 .kpi-val .unit { font-size: 14px; font-weight: 600; margin-left: 2px; color: var(--text-2); }
-.kpi-delta { font-size: 11.5px; color: var(--text-3); margin-top: 5px; display: flex; align-items: center; gap: 4px; }
-.kpi-delta .up { color: var(--st-completed); font-weight: 600; }
-.kpi-delta .down { color: var(--danger); font-weight: 600; }
-.kpi-delta .flat { color: var(--text-3); font-weight: 600; }
+.kpi-delta { font-size: 11.5px; color: var(--text-3); display: flex; align-items: center; gap: 4px; }
+.kpi-delta .up { color: var(--st-completed); font-weight: 700; }
+.kpi-delta .down { color: var(--danger); font-weight: 700; }
+.kpi-delta .flat { color: var(--text-3); font-weight: 700; }
+
+/* 各 KPI 配色 */
+.t-blue   { --kpi-bg: rgba(79,107,237,0.11);  --kpi-fg: #4F6BED; }
+.t-indigo { --kpi-bg: rgba(99,102,241,0.11);  --kpi-fg: #6366F1; }
+.t-green  { --kpi-bg: rgba(53,166,111,0.12);  --kpi-fg: #35A66F; }
+.t-gray   { --kpi-bg: rgba(154,164,178,0.15); --kpi-fg: #8593A3; }
+.t-sky    { --kpi-bg: rgba(14,165,233,0.11);  --kpi-fg: #0EA5E9; }
+.t-purple { --kpi-bg: rgba(139,92,246,0.11);  --kpi-fg: #8B5CF6; }
+.t-red    { --kpi-bg: rgba(229,72,77,0.10);   --kpi-fg: #E5484D; }
+.t-pink   { --kpi-bg: rgba(236,72,153,0.10);  --kpi-fg: #EC4899; }
 
 /* 趋势图 */
-.chart-card {
-  background: var(--surface); border: 1px solid var(--bd); border-radius: var(--r-card);
-  padding: var(--sp-4); box-shadow: var(--shadow-sm);
-}
-.chart-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-2); }
-.chart-title { font-size: 13.5px; font-weight: 650; color: var(--text); }
-.chart-legend { display: flex; gap: var(--sp-4); flex-wrap: wrap; }
+.chart-legend { display: flex; gap: var(--sp-4); flex-wrap: wrap; justify-content: center; margin-bottom: var(--sp-2); }
 .chart-legend .lg { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-2); }
-.chart-legend .lg i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.chart-legend .lg i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
 .chart-wrap { position: relative; }
-.trend-chart { display: block; width: 100%; height: 190px; overflow: visible; }
+.trend-chart { display: block; width: 100%; height: 200px; overflow: visible; }
 .chart-tip {
   position: absolute; pointer-events: none; display: none; z-index: 5;
   background: var(--text); color: var(--surface); font-size: 11.5px; line-height: 1.6;
@@ -655,44 +712,51 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
 }
 .chart-tip.show { display: block; }
 
-/* 右侧 AI 区 */
-.ai-side { display: flex; flex-direction: column; gap: var(--sp-3); }
+/* 右侧 AI 与快捷入口 */
+.ai-side { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
 .ai-card {
-  background: var(--primary-weak);
-  border: 1px solid var(--bd); border-radius: var(--r-card);
-  padding: var(--sp-4); box-shadow: var(--shadow-sm);
-}
-.ai-card-title { font-size: 14px; font-weight: 650; color: var(--text); margin-bottom: 6px; }
-.ai-card-desc { font-size: 12px; color: var(--text-2); line-height: 1.6; margin-bottom: var(--sp-4); }
-.ai-gen-btn {
-  width: 100%; height: 38px; border: none; border-radius: var(--r-ctl);
-  background: var(--primary); color: var(--on-primary); font-size: 13.5px; font-weight: 600;
+  display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
+  padding: var(--sp-4) var(--sp-3);
+  background: #F4F1FE; border: 1px solid #E6E0FB; border-radius: var(--r-lg);
   cursor: pointer; transition: filter var(--t);
 }
-.ai-gen-btn:hover { filter: brightness(1.07); }
-.ai-gen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.side-links { display: flex; flex-direction: column; gap: 6px; }
-.side-links button {
-  display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
-  padding: 10px 13px; border: 1px solid var(--bd); border-radius: var(--r-ctl);
-  background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500;
-  cursor: pointer; transition: all var(--t);
+html[data-theme="dark"] .ai-card { background: rgba(139,92,246,0.13); border-color: rgba(139,92,246,0.28); }
+.ai-card:hover { filter: brightness(0.985); }
+.ai-ic {
+  width: 32px; height: 32px; border-radius: 50%; flex: none;
+  background: #E9E3FD; color: #7C5CF5;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 15px;
 }
-.side-links button:hover { background: var(--hover); color: var(--text); }
-.side-links .ic { font-size: 13px; color: var(--text-3); width: 14px; text-align: center; }
+html[data-theme="dark"] .ai-ic { background: rgba(139,92,246,0.22); color: #B49CFF; }
+.ai-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.ai-txt b { font-size: 13.5px; font-weight: 650; color: var(--text); }
+.ai-txt small { font-size: 11.5px; color: var(--text-2); line-height: 1.45; }
+.chev { flex: none; color: var(--text-3); font-size: 15px; }
 
-@media (max-width: 1280px) {
-  .stats-section { grid-template-columns: 1fr; padding: var(--sp-4); }
-  .kpi-grid { gap: var(--sp-2); }
-  .ai-side { flex-direction: row; align-items: stretch; }
-  .ai-card { flex: 1; }
-  .side-links { flex: 1; flex-direction: row; flex-wrap: wrap; }
-  .side-links button { width: auto; flex: 1; }
+.link-card {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 13px var(--sp-3);
+  background: var(--surface); border: 1px solid var(--bd); border-radius: var(--r-card);
+  color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: background var(--t), border-color var(--t), color var(--t);
 }
-@media (max-width: 900px) {
+.link-card:hover { background: var(--hover); color: var(--text); }
+.link-card .ic { flex: none; width: 16px; text-align: center; color: var(--text-3); font-size: 13px; }
+.link-card .chev { margin-left: auto; }
+
+@media (max-width: 1500px) {
+  .stats-section { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+  .ai-side { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; }
+  .ai-card { flex: 1 1 260px; }
+  .link-card { flex: 1 1 160px; }
+}
+@media (max-width: 1100px) {
+  .stats-section { grid-template-columns: 1fr; padding: var(--sp-4); }
   .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ai-side { flex-direction: column; }
-  .side-links { flex-direction: column; }
+  .ai-card, .link-card { flex: 1 1 auto; }
+  .panel-head-right { margin-left: 0; width: 100%; }
+  .tabs { overflow-x: auto; }
 }
 
 </style>
@@ -862,58 +926,76 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
     <div id="listView" style="display:none"></div>
   </div>
 
-  <!-- 任务统计与分析 -->
+  <!-- 任务统计与分析：三栏并排（统计 / 趋势 / AI） -->
   <section class="stats-section">
-    <div class="stats-main">
-      <div class="stats-toolbar">
-        <h3>任务统计与分析</h3>
-        <div class="stats-controls">
-          <div class="quick-ranges">
-            <button class="quick-range-btn" data-range="week">近一周</button>
-            <button class="quick-range-btn" data-range="month">近一月</button>
-            <button class="quick-range-btn" data-range="quarter">近三月</button>
-            <button class="quick-range-btn" data-range="halfyear">近半年</button>
-            <button class="quick-range-btn" data-range="year">近一年</button>
+
+    <!-- 1. 任务统计（KPI） -->
+    <div class="panel stat-panel">
+      <div class="panel-head">
+        <span class="panel-ic">📊</span>
+        <span class="panel-title">任务统计</span>
+        <span class="info-dot" title="待处理 / 处理中为当前存量（不受区间限制）；已完成按完成时间、已取消按取消时间统计">i</span>
+        <div class="panel-head-right">
+          <div class="tabs">
+            <button class="tab" data-range="week">近一周</button>
+            <button class="tab" data-range="month">近一月</button>
+            <button class="tab" data-range="quarter">近三月</button>
+            <button class="tab" data-range="halfyear">近半年</button>
+            <button class="tab" data-range="year">近一年</button>
           </div>
-          <input type="date" id="statsStart">
-          <span class="range-sep">～</span>
-          <input type="date" id="statsEnd">
-          <button class="stats-query-btn" id="statsQuery">查询</button>
+          <div class="date-range">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+            <input type="date" id="statsStart">
+            <span class="tilde">~</span>
+            <input type="date" id="statsEnd">
+            <svg class="chev-dn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
         </div>
       </div>
-      <div class="stats-scope-hint">待处理 / 处理中为当前存量（不受区间限制）；已完成按完成时间、已取消按取消时间统计</div>
-
       <div class="kpi-grid" id="kpiGrid"></div>
+    </div>
 
-      <div class="chart-card">
-        <div class="chart-head">
-          <span class="chart-title">任务趋势</span>
-          <div class="chart-legend">
-            <span class="lg"><i style="background:var(--st-pending)"></i>新增任务</span>
-            <span class="lg"><i style="background:var(--st-completed)"></i>完成任务</span>
-            <span class="lg"><i style="background:var(--st-processing)"></i>处理中任务</span>
-          </div>
-        </div>
-        <div class="chart-wrap">
-          <svg id="trendChart" class="trend-chart" preserveAspectRatio="none"></svg>
-          <div class="chart-tip" id="chartTip"></div>
-        </div>
+    <!-- 2. 任务趋势 -->
+    <div class="panel trend-panel">
+      <div class="panel-head">
+        <span class="panel-ic">📈</span>
+        <span class="panel-title">任务趋势</span>
+        <select class="mini-select" id="trendRange">
+          <option value="week" selected>近一周</option>
+          <option value="month">近一月</option>
+          <option value="quarter">近三月</option>
+          <option value="halfyear">近半年</option>
+          <option value="year">近一年</option>
+        </select>
+      </div>
+      <div class="chart-legend">
+        <span class="lg"><i style="background:var(--st-pending)"></i>新增任务</span>
+        <span class="lg"><i style="background:var(--st-completed)"></i>完成任务</span>
+        <span class="lg"><i style="background:var(--st-processing)"></i>处理中任务</span>
+      </div>
+      <div class="chart-wrap">
+        <svg id="trendChart" class="trend-chart" preserveAspectRatio="none"></svg>
+        <div class="chart-tip" id="chartTip"></div>
       </div>
     </div>
 
+    <!-- 3. AI 与快捷入口 -->
     <aside class="ai-side">
-      <div class="ai-card">
-        <div class="ai-card-title">✨ AI 任务周报</div>
-        <p class="ai-card-desc">基于当前任务数据，生成本周任务汇报</p>
-        <button class="ai-gen-btn" id="aiReportBtn">生成周报 →</button>
-      </div>
-      <div class="side-links">
-        <button id="statsExport"><span class="ic">⬇</span>导出 CSV</button>
-        <button id="sideSettings"><span class="ic">⚙</span>任务设置</button>
-        <button id="sideHelp"><span class="ic">?</span>帮助中心</button>
-      </div>
+      <button class="ai-card" id="aiReportBtn">
+        <span class="ai-ic">✨</span>
+        <span class="ai-txt">
+          <b>AI 任务周报</b>
+          <small>基于当前任务，生成本周任务汇报</small>
+        </span>
+        <span class="chev">›</span>
+      </button>
+      <button class="link-card" id="statsExport"><span class="ic">⬇</span>导出 CSV<span class="chev">›</span></button>
+      <button class="link-card" id="sideSettings"><span class="ic">⚙</span>任务设置<span class="chev">›</span></button>
+      <button class="link-card" id="sideHelp"><span class="ic">?</span>帮助中心<span class="chev">›</span></button>
     </aside>
+
   </section>
+
 
 </div>
 
@@ -1145,7 +1227,7 @@ function setQuickRange(range, silent) {
   document.getElementById('statsStart').value = toDateStr(start);
   document.getElementById('statsEnd').value = toDateStr(end);
   // 更新按钮激活态
-  document.querySelectorAll('.quick-range-btn').forEach(btn => {
+  document.querySelectorAll('.tab').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.range === range);
   });
   if (!silent) renderStats();
@@ -1153,7 +1235,7 @@ function setQuickRange(range, silent) {
 
 // 用户手动改日期后，清除快捷按钮的激活态（表示自定义区间）
 function clearQuickRangeActive() {
-  document.querySelectorAll('.quick-range-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
 }
 
 function toDateStr(d) {
@@ -2363,20 +2445,21 @@ function computeKpis() {
     prev: prev == null ? 0 : prev,
     unit: (opts && opts.unit) || '',
     betterWhen: (opts && opts.betterWhen) || 'none',
+    tone: (opts && opts.tone) || 't-blue',
     decimals: (opts && opts.decimals) || 0
   });
 
   return [
-    mk('total', '任务总数', ICON_KPI.box, _totalAt(end), _totalAt(pEnd)),
-    mk('created', '新增任务', ICON_KPI.plus, _countCreated(start, end), _countCreated(pStart, pEnd)),
-    mk('done', '完成任务', ICON_KPI.check, _countCompleted(start, end), _countCompleted(pStart, pEnd)),
-    mk('cancelled', '取消任务', ICON_KPI.x, _countCancelled(start, end), _countCancelled(pStart, pEnd)),
+    mk('total', '任务总数', ICON_KPI.box, _totalAt(end), _totalAt(pEnd), { tone: 't-blue' }),
+    mk('created', '新增任务', ICON_KPI.plus, _countCreated(start, end), _countCreated(pStart, pEnd), { tone: 't-indigo' }),
+    mk('done', '完成任务', ICON_KPI.check, _countCompleted(start, end), _countCompleted(pStart, pEnd), { tone: 't-green' }),
+    mk('cancelled', '取消任务', ICON_KPI.x, _countCancelled(start, end), _countCancelled(pStart, pEnd), { tone: 't-gray' }),
     mk('avg', '平均处理时长', ICON_KPI.clock, _avgHours(start, end), _avgHours(pStart, pEnd),
-       { unit: 'h', betterWhen: 'down', decimals: 1 }),
+       { unit: 'h', betterWhen: 'down', decimals: 1, tone: 't-sky' }),
     mk('ontime', '按时完成率', ICON_KPI.shield, _onTimeRate(start, end), _onTimeRate(pStart, pEnd),
-       { unit: '%', betterWhen: 'up' }),
-    mk('overdue', '超期任务', ICON_KPI.alert, _overdueAt(now), _overdueAt(pEnd), { betterWhen: 'down' }),
-    mk('processing', '当前处理中', ICON_KPI.play, _countProcessingAt(now), _countProcessingAt(pEnd))
+       { unit: '%', betterWhen: 'up', tone: 't-purple' }),
+    mk('overdue', '超期任务', ICON_KPI.alert, _overdueAt(now), _overdueAt(pEnd), { betterWhen: 'down', tone: 't-red' }),
+    mk('processing', '当前处理中', ICON_KPI.play, _countProcessingAt(now), _countProcessingAt(pEnd), { tone: 't-pink' })
   ];
 }
 
@@ -2399,7 +2482,7 @@ function renderKpis() {
       ? '<span class="flat">— 与上期持平</span>'
       : `<span class="${cls}">${arrow} ${absDiff}${k.unit}</span><span>较上期</span>`;
     return `<div class="kpi">
-        <div class="kpi-top"><span class="kpi-ic">${k.icon}</span><span class="kpi-label">${escHtml(k.label)}</span></div>
+        <div class="kpi-top"><span class="kpi-ic ${k.tone}">${k.icon}</span><span class="kpi-label">${escHtml(k.label)}</span></div>
         <div class="kpi-val">${cur}<span class="unit">${k.unit}</span></div>
         <div class="kpi-delta">${deltaTxt}</div>
       </div>`;
@@ -2426,7 +2509,9 @@ const TREND_SERIES = [
 ];
 
 function computeTrend() {
-  const { start, end } = computeStats();
+  const trendSel = document.getElementById('trendRange');
+  const rng = calcQuickRange(trendSel ? trendSel.value : 'week');
+  const start = rng.start, end = rng.end;
   const days = [];
   const oneDay = 86400000;
   let cur = new Date(start.getFullYear(), start.getMonth(), start.getDate());
@@ -2875,6 +2960,16 @@ function setupEventListeners() {
   }
 
   // 已完成列：查看全部 / 收起
+  // 趋势图独立周期
+  const tr = document.getElementById('trendRange');
+  if (tr) tr.addEventListener('change', renderTrendChart);
+
+  // 日期范围变化即刷新（已移除「查询」按钮）
+  ['statsStart', 'statsEnd'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => { clearQuickRangeActive(); renderStats(); });
+  });
+
   const sac = document.getElementById('showAllCompleted');
   if (sac) sac.addEventListener('click', toggleShowAllCompleted);
 
@@ -2932,10 +3027,9 @@ function setupEventListeners() {
     document.getElementById('cancelReasonInput').style.borderColor = '';
   });
   // Statistics
-  document.getElementById('statsQuery').addEventListener('click', renderStats);
   document.getElementById('statsExport').addEventListener('click', exportStatsCSV);
   // 快捷周期按钮：点击后立即刷新统计
-  document.querySelectorAll('.quick-range-btn').forEach(btn => {
+  document.querySelectorAll('.tab').forEach(btn => {
     btn.addEventListener('click', () => setQuickRange(btn.dataset.range));
   });
   // 手动修改日期时，取消快捷按钮的激活态（表示自定义区间）
