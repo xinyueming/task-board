@@ -891,6 +891,123 @@ html[data-theme="dark"] .ai-ic { background: rgba(139,92,246,0.22); color: #B49C
   .dr-grid { grid-template-columns: 1fr; }
 }
 
+/* ============================================================
+   阶段 4：列表模式
+   ============================================================ */
+.lv-spacer { flex: 1; }
+
+/* --- 批量操作栏 --- */
+.lv-bar {
+  display: none; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 9px 12px; margin-bottom: var(--sp-3);
+  background: var(--primary-weak); border: 1px solid var(--primary);
+  border-radius: var(--r-card);
+}
+.lv-bar.show { display: flex; }
+.lv-sel { font-size: 12.5px; font-weight: 600; color: var(--primary); margin-right: 4px; }
+.lv-sel b { font-variant-numeric: tabular-nums; }
+
+.lv-b {
+  height: 30px; padding: 0 12px; border-radius: var(--r-ctl);
+  border: 1px solid var(--bd); background: var(--surface); color: var(--text-2);
+  font-size: 12.5px; font-weight: 500; cursor: pointer; transition: all var(--t);
+  white-space: nowrap;
+}
+.lv-b:hover { background: var(--hover); color: var(--text); }
+.lv-b.danger { color: var(--danger); border-color: transparent; }
+.lv-b.danger:hover { background: var(--danger-weak); }
+.lv-b.ghost { border-color: transparent; background: transparent; color: var(--primary); }
+.lv-b.ghost:hover { background: var(--surface); }
+
+/* --- 表格卡片 --- */
+.lv-card {
+  background: var(--surface); border: 1px solid var(--bd);
+  border-radius: var(--r-card); overflow: hidden;
+}
+.lv-tools {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-bottom: 1px solid var(--bd-soft);
+}
+.lv-total { font-size: 12.5px; color: var(--text-3); }
+.lv-total b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+.lv-colwrap { position: relative; }
+.lv-cols { min-width: 190px; padding: 8px; }
+.lv-col-item {
+  display: flex; align-items: center; gap: 8px; padding: 7px 9px;
+  border-radius: var(--r-ctl); font-size: 13px; color: var(--text-2); cursor: pointer;
+}
+.lv-col-item:hover { background: var(--hover); color: var(--text); }
+.lv-col-item input { accent-color: var(--primary); cursor: pointer; }
+.lv-col-item.locked { opacity: .55; cursor: default; }
+.lv-col-item.locked:hover { background: transparent; color: var(--text-2); }
+
+.lv-scroll { overflow-x: auto; }
+.lv-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.lv-table thead th {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--surface-2); color: var(--text-2);
+  font-size: 11.5px; font-weight: 650; text-align: left; letter-spacing: .3px;
+  padding: 10px 12px; border-bottom: 1px solid var(--bd); white-space: nowrap;
+  user-select: none;
+}
+.lv-table thead th.sortable { cursor: pointer; transition: color var(--t); }
+.lv-table thead th.sortable:hover { color: var(--text); }
+.lv-sarrow { margin-left: 5px; font-size: 10px; color: var(--primary); }
+
+.lv-table tbody tr {
+  border-bottom: 1px solid var(--bd-soft); transition: background var(--t); cursor: pointer;
+}
+.lv-table tbody tr:last-child { border-bottom: none; }
+.lv-table tbody tr:hover { background: var(--hover); }
+.lv-table tbody tr.sel { background: var(--primary-weak); }
+.lv-table td { padding: 11px 12px; color: var(--text); vertical-align: middle; }
+
+.lv-ck { width: 44px; }
+.lv-ck input { width: 15px; height: 15px; accent-color: var(--primary); cursor: pointer; vertical-align: middle; }
+.lv-id { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--text-3); white-space: nowrap; }
+.lv-title { font-weight: 550; display: inline-block; max-width: 380px; }
+.lv-dim { color: var(--text-3); }
+.lv-over { color: var(--danger); font-weight: 600; }
+
+.lv-empty { padding: 56px 16px; text-align: center; }
+.lv-empty .t { font-size: 14px; font-weight: 600; color: var(--text-2); }
+.lv-empty .s { font-size: 12.5px; color: var(--text-3); margin-top: 6px; }
+
+/* --- 分页 --- */
+.lv-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 4px 2px; }
+.lv-pg {
+  height: 30px; padding: 0 12px; border-radius: var(--r-ctl);
+  border: 1px solid var(--bd); background: var(--surface); color: var(--text-2);
+  font-size: 12.5px; cursor: pointer; transition: all var(--t);
+}
+.lv-pg:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.lv-pg:disabled { opacity: .45; cursor: not-allowed; }
+.lv-pages { font-size: 12.5px; color: var(--text-2); font-variant-numeric: tabular-nums; padding: 0 4px; }
+.lv-per { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-3); }
+.lv-per select {
+  height: 30px; padding: 0 6px; border-radius: var(--r-ctl); border: 1px solid var(--field-bd);
+  background: var(--field); color: var(--text-2); font-size: 12.5px;
+}
+
+/* --- 窄屏：表格转卡片堆叠 --- */
+@media (max-width: 640px) {
+  .lv-scroll { overflow-x: visible; }
+  .lv-table, .lv-table tbody, .lv-table tr, .lv-table td { display: block; width: auto; }
+  .lv-table thead { display: none; }
+  .lv-table tbody tr {
+    border: 1px solid var(--bd); border-radius: var(--r-card); margin: 10px; padding: 4px 0;
+  }
+  .lv-table td { display: flex; gap: 12px; padding: 7px 12px; border: none; }
+  .lv-table td::before {
+    content: attr(data-label); flex: none; width: 72px;
+    font-size: 11.5px; color: var(--text-3);
+  }
+  .lv-table td.lv-ck { width: auto; padding: 8px 12px 2px; }
+  .lv-table td.lv-ck::before { display: none; }
+  .lv-title { max-width: none; }
+}
+
 </style>
 <!-- Supabase 客户端库（UMD 全局版，暴露 window.supabase） -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -1054,8 +1171,54 @@ html[data-theme="dark"] .ai-ic { background: rgba(139,92,246,0.22); color: #B49C
       </div>
     </div>
 
-    <!-- 列表模式（阶段 4 实现） -->
-    <div id="listView" style="display:none"></div>
+    <!-- 列表模式（阶段 4） -->
+    <div id="listView" style="display:none">
+
+      <!-- 批量操作栏：有选中项才出现 -->
+      <div class="lv-bar" id="lvBatchBar">
+        <span class="lv-sel">已选 <b id="lvSelCount">0</b> 项</span>
+        <button class="lv-b" onclick="batchAction('start')">启动</button>
+        <button class="lv-b" onclick="batchAction('complete')">完成</button>
+        <button class="lv-b" onclick="batchAction('cancel')">取消</button>
+        <button class="lv-b danger" onclick="batchAction('delete')">删除</button>
+        <button class="lv-b" onclick="batchAction('export')">导出 CSV</button>
+        <span class="lv-spacer"></span>
+        <button class="lv-b ghost" onclick="clearListSelection()">清除选择</button>
+      </div>
+
+      <div class="lv-card">
+        <div class="lv-tools">
+          <span class="lv-total" id="lvTotal"></span>
+          <span class="lv-spacer"></span>
+          <div class="lv-colwrap">
+            <button class="lv-b" id="lvColsBtn">列设置 ▾</button>
+            <div class="dropdown lv-cols" id="lvColsMenu"></div>
+          </div>
+        </div>
+        <div class="lv-scroll">
+          <table class="lv-table">
+            <thead id="lvHead"></thead>
+            <tbody id="lvBody"></tbody>
+          </table>
+        </div>
+        <div class="lv-empty" id="lvEmpty" style="display:none"></div>
+      </div>
+
+      <div class="lv-foot">
+        <label class="lv-per">每页
+          <select id="lvPageSize">
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </label>
+        <span class="lv-spacer"></span>
+        <button class="lv-pg" id="lvPrev" onclick="listGoPage(-1)">上一页</button>
+        <span class="lv-pages" id="lvPages">1 / 1</span>
+        <button class="lv-pg" id="lvNext" onclick="listGoPage(1)">下一页</button>
+      </div>
+
+    </div>
   </div>
 
   <!-- 任务统计与分析：三栏并排（统计 / 趋势 / AI） -->
@@ -1319,6 +1482,7 @@ let showAllCompleted = false;   // 已完成列是否展开全部
 //  INIT
 // ============================================================
 function init() {
+  loadListPrefs();   // 列表模式的排序 / 分页 / 列显隐 / 上次视图
   setDefaultDates();
   setupEventListeners();
   // 检查 Supabase 是否已有会话（已登录则直接进入）
@@ -1587,6 +1751,7 @@ function enterApp() {
   const dd = document.getElementById('ddEmail');
   if (dd) dd.textContent = email;
   loadAiSettings();   // 从账号加载 AI 配置（含本地缓存 + 云端同步）
+  setView(listViewMode);   // 恢复上次使用的视图（看板 / 列表）
 }
 
 function showLoginMode() {
@@ -1718,6 +1883,7 @@ function renderAll() {
   renderColumns();
   renderStats();
   renderTrash();
+  if (listViewMode === 'list') renderList();
 }
 
 // ---- 卡片用的小图标（内联 SVG，替代 emoji） ----
@@ -1865,7 +2031,456 @@ function renderColumns() {
 
 function toggleShowAllCompleted() {
   showAllCompleted = !showAllCompleted;
+  refreshViews();
+}
+
+// ============================================================
+//  阶段 4：列表模式
+// ============================================================
+let listViewMode = 'board';                 // 'board' | 'list'
+let listSort = { key: 'updatedAt', dir: 'desc' };
+let listPage = 1;
+let listPageSize = 20;
+let listSel = new Set();                    // 已选任务 id
+
+// 列定义：on = 默认显示，opt = 可在「列设置」里开关
+const LV_COLUMNS = [
+  { key: 'id',          label: '任务编号', on: true,  opt: false, sortable: true  },
+  { key: 'title',       label: '任务标题', on: true,  opt: false, sortable: true  },
+  { key: 'status',      label: '状态',     on: true,  opt: false, sortable: true  },
+  { key: 'priority',    label: '优先级',   on: true,  opt: false, sortable: true  },
+  { key: 'assignee',    label: '负责人',   on: true,  opt: false, sortable: true  },
+  { key: 'department',  label: '所属部门', on: true,  opt: false, sortable: true  },
+  { key: 'dueDate',     label: '截止时间', on: true,  opt: false, sortable: true  },
+  { key: 'updatedAt',   label: '最后更新', on: true,  opt: false, sortable: true  },
+  { key: 'source',      label: '客户来源', on: false, opt: true,  sortable: true  },
+  { key: 'tags',        label: '标签',     on: false, opt: true,  sortable: false },
+  { key: 'createdAt',   label: '创建时间', on: false, opt: true,  sortable: true  },
+  { key: 'startedAt',   label: '开始时间', on: false, opt: true,  sortable: true  },
+  { key: 'completedAt', label: '完成时间', on: false, opt: true,  sortable: true  },
+  { key: 'cancelledAt', label: '取消时间', on: false, opt: true,  sortable: true  },
+  { key: 'elapsed',     label: '已耗时',   on: false, opt: true,  sortable: false }
+];
+let lvColOn = {};                           // key -> bool
+
+const LV_PREFS_KEY = 'kanban_list_prefs';
+
+function loadListPrefs() {
+  let p = {};
+  try {
+    const raw = localStorage.getItem(LV_PREFS_KEY);
+    if (raw) p = JSON.parse(raw) || {};
+  } catch (e) { p = {}; }
+
+  listPageSize = ([20, 50, 100].indexOf(Number(p.pageSize)) >= 0) ? Number(p.pageSize) : 20;
+
+  const sortOk = LV_COLUMNS.some(c => c.key === p.sortKey && c.sortable);
+  listSort = {
+    key: sortOk ? p.sortKey : 'updatedAt',
+    dir: p.sortDir === 'asc' ? 'asc' : 'desc'
+  };
+
+  LV_COLUMNS.forEach(c => { lvColOn[c.key] = c.on; });
+  if (p.cols && typeof p.cols === 'object') {
+    Object.keys(p.cols).forEach(k => {
+      const col = LV_COLUMNS.find(c => c.key === k);
+      if (col && col.opt) lvColOn[k] = !!p.cols[k];
+    });
+  }
+  listViewMode = p.view === 'list' ? 'list' : 'board';
+}
+
+function saveListPrefs() {
+  try {
+    localStorage.setItem(LV_PREFS_KEY, JSON.stringify({
+      pageSize: listPageSize,
+      sortKey: listSort.key,
+      sortDir: listSort.dir,
+      cols: lvColOn,
+      view: listViewMode
+    }));
+  } catch (e) { /* 忽略隐私模式等写入失败 */ }
+}
+
+function visibleListCols() {
+  return LV_COLUMNS.filter(c => lvColOn[c.key]);
+}
+
+// ---- 单元格渲染 ----
+function lvCellHtml(t, col) {
+  const dim = '<span class="lv-dim">—</span>';
+  switch (col.key) {
+    case 'id':         return `<span class="lv-id">${escHtml(t.id)}</span>`;
+    case 'title':      return `<span class="lv-title">${escHtml(t.title)}</span>`;
+    case 'status':     return `<span class="dr-badge ${t.status}">${escHtml(STATUS_LABELS[t.status] || t.status)}</span>`;
+    case 'priority': {
+      const p = t.priority || 'P2';
+      const cls = p === 'P0' ? 'p0' : (p === 'P1' ? 'p1' : '');
+      return `<span class="dr-badge ${cls}">${escHtml(p)}</span>`;
+    }
+    case 'assignee':   return t.assignee   ? escHtml(t.assignee)   : dim;
+    case 'department': return t.department ? escHtml(t.department) : dim;
+    case 'source':     return t.source     ? escHtml(t.source)     : dim;
+    case 'dueDate': {
+      if (!t.dueDate) return dim;
+      const over = isOverdue(t);
+      return `<span class="${over ? 'lv-over' : ''}">${escHtml(fmtDue(t.dueDate))}${over ? ' 已超期' : ''}</span>`;
+    }
+    case 'elapsed': {
+      const el = elapsedText(t);
+      return el ? escHtml(el) : dim;
+    }
+    case 'tags': {
+      const tags = Array.isArray(t.tags) ? t.tags : [];
+      return tags.length
+        ? tags.map(x => `<span class="dr-tag">${escHtml(x)}</span>`).join(' ')
+        : dim;
+    }
+    case 'createdAt':
+    case 'startedAt':
+    case 'completedAt':
+    case 'cancelledAt':
+    case 'updatedAt': {
+      const v = t[col.key];
+      return v ? escHtml(shortTime(v)) : dim;
+    }
+    default: return '';
+  }
+}
+
+// ---- 排序 ----
+const LV_PRIO_ORDER = { P0: 0, P1: 1, P2: 2, P3: 3 };
+const LV_STATUS_ORDER = { pending: 0, processing: 1, completed: 2, cancelled: 3 };
+
+function lvMissing(t, key) {
+  if (key === 'elapsed') return !elapsedText(t);
+  if (key === 'priority') return false;
+  return !t[key];
+}
+
+function lvSortValue(t, key) {
+  switch (key) {
+    case 'priority': return LV_PRIO_ORDER[t.priority || 'P2'];
+    case 'status':   return LV_STATUS_ORDER[t.status];
+    case 'dueDate':  return new Date(t.dueDate + 'T00:00:00').getTime();
+    case 'createdAt': case 'startedAt': case 'completedAt': case 'cancelledAt': case 'updatedAt':
+      return new Date(t[key]).getTime();
+    default: return String(t[key] == null ? '' : t[key]);
+  }
+}
+
+function lvCompare(a, b, key) {
+  const va = lvSortValue(a, key);
+  const vb = lvSortValue(b, key);
+  if (typeof va === 'number' && typeof vb === 'number') {
+    if (va === vb) return 0;
+    if (isNaN(va)) return 1;
+    if (isNaN(vb)) return -1;
+    return va < vb ? -1 : 1;
+  }
+  return String(va).localeCompare(String(vb), 'zh-CN');
+}
+
+// 空值永远排在最后，不随升降序翻转
+function sortListRows(rows) {
+  const key = listSort.key;
+  const dir = listSort.dir;
+  if (!key || !dir) return rows;
+  const s = dir === 'asc' ? 1 : -1;
+  return rows.slice().sort((a, b) => {
+    const ma = lvMissing(a, key);
+    const mb = lvMissing(b, key);
+    if (ma && mb) return 0;
+    if (ma) return 1;
+    if (mb) return -1;
+    return lvCompare(a, b, key) * s;
+  });
+}
+
+function sortListBy(key) {
+  const col = LV_COLUMNS.find(c => c.key === key);
+  if (!col || !col.sortable) return;
+  if (listSort.key !== key) { listSort.key = key; listSort.dir = 'asc'; }
+  else if (listSort.dir === 'asc') { listSort.dir = 'desc'; }
+  else if (listSort.dir === 'desc') { listSort.key = ''; listSort.dir = ''; }
+  else { listSort.key = key; listSort.dir = 'asc'; }
+  listPage = 1;
+  saveListPrefs();
+  renderList();
+}
+
+// ---- 分页 ----
+function listGoPage(delta) {
+  const pages = Math.max(1, Math.ceil(sortListRows(getFilteredTasks()).length / listPageSize));
+  const next = listPage + delta;
+  if (next < 1 || next > pages) return;
+  listPage = next;
+  renderList();
+}
+
+function listPageRows(rows) {
+  const start = (listPage - 1) * listPageSize;
+  return rows.slice(start, start + listPageSize);
+}
+
+// ---- 选择 ----
+function toggleListSel(id) {
+  if (listSel.has(id)) listSel.delete(id); else listSel.add(id);
+  renderList();
+}
+
+function toggleListSelAll() {
+  const rows = listPageRows(sortListRows(getFilteredTasks()));
+  const allSel = rows.length > 0 && rows.every(t => listSel.has(t.id));
+  rows.forEach(t => { if (allSel) listSel.delete(t.id); else listSel.add(t.id); });
+  renderList();
+}
+
+function clearListSelection() {
+  listSel.clear();
+  renderList();
+}
+
+function toggleListCol(key, on) {
+  const col = LV_COLUMNS.find(c => c.key === key);
+  if (!col || !col.opt) return;
+  lvColOn[key] = !!on;
+  saveListPrefs();
+  renderList();
+}
+
+// ---- 渲染 ----
+function renderList() {
+  const lv = document.getElementById('listView');
+  if (!lv || listViewMode !== 'list') return;
+
+  // 清理已不存在（被删除）的选中项
+  const alive = new Set(tasks.map(t => t.id));
+  Array.from(listSel).forEach(id => { if (!alive.has(id)) listSel.delete(id); });
+
+  const rows = sortListRows(getFilteredTasks());
+  const total = rows.length;
+  const pages = Math.max(1, Math.ceil(total / listPageSize));
+  if (listPage > pages) listPage = pages;
+  if (listPage < 1) listPage = 1;
+  const pageRows = listPageRows(rows);
+
+  renderListHead(pageRows);
+  renderListBody(pageRows);
+  renderListFoot(total, pages, pageRows);
+  renderListBar();
+  renderListColsMenu();
+}
+
+function renderListHead(pageRows) {
+  const cols = visibleListCols();
+  const allSel = pageRows.length > 0 && pageRows.every(t => listSel.has(t.id));
+  const someSel = pageRows.some(t => listSel.has(t.id));
+  let h = `<tr><th class="lv-ck"><input type="checkbox" ${allSel ? 'checked' : ''}`
+    + ` title="全选本页" onclick="event.stopPropagation(); toggleListSelAll()"></th>`;
+  cols.forEach(c => {
+    const active = !!listSort.key && listSort.key === c.key;
+    const arrow = active ? (listSort.dir === 'asc' ? '▲' : '▼') : '';
+    const click = c.sortable ? ` onclick="sortListBy('${c.key}')"` : '';
+    h += `<th class="${c.sortable ? 'sortable' : ''}"${click}>`
+      + escHtml(c.label) + (arrow ? `<span class="lv-sarrow">${arrow}</span>` : '') + '</th>';
+  });
+  const head = document.getElementById('lvHead');
+  head.innerHTML = h + '</tr>';
+  const box = head.querySelector('input');
+  if (box && someSel && !allSel) box.indeterminate = true;
+}
+
+function renderListBody(pageRows) {
+  const body = document.getElementById('lvBody');
+  const emp = document.getElementById('lvEmpty');
+  if (!pageRows.length) {
+    body.innerHTML = '';
+    emp.style.display = '';
+    emp.innerHTML = '<div class="t">没有符合条件的任务</div>'
+      + '<div class="s">试试调整上方的搜索或筛选条件</div>';
+    return;
+  }
+  emp.style.display = 'none';
+  const cols = visibleListCols();
+  body.innerHTML = pageRows.map(t => {
+    const sel = listSel.has(t.id);
+    const tds = cols.map(c =>
+      `<td data-label="${escHtml(c.label)}">${lvCellHtml(t, c)}</td>`).join('');
+    return `<tr class="${sel ? 'sel' : ''}" onclick="showDetail('${t.id}')">`
+      + `<td class="lv-ck"><input type="checkbox" ${sel ? 'checked' : ''}`
+      + ` onclick="event.stopPropagation(); toggleListSel('${t.id}')"></td>`
+      + tds + '</tr>';
+  }).join('');
+}
+
+function renderListFoot(total, pages, pageRows) {
+  const start = total ? (listPage - 1) * listPageSize + 1 : 0;
+  const end = start ? start + pageRows.length - 1 : 0;
+  const tot = document.getElementById('lvTotal');
+  if (tot) {
+    tot.innerHTML = total
+      ? `共 <b>${total}</b> 条　当前 ${start}–${end}`
+      : '共 <b>0</b> 条';
+  }
+  const pg = document.getElementById('lvPages');
+  if (pg) pg.textContent = listPage + ' / ' + pages;
+  const prev = document.getElementById('lvPrev');
+  const next = document.getElementById('lvNext');
+  if (prev) prev.disabled = listPage <= 1;
+  if (next) next.disabled = listPage >= pages;
+  const ps = document.getElementById('lvPageSize');
+  if (ps && String(ps.value) !== String(listPageSize)) ps.value = String(listPageSize);
+}
+
+function renderListBar() {
+  const bar = document.getElementById('lvBatchBar');
+  if (!bar) return;
+  bar.classList.toggle('show', listSel.size > 0);
+  const c = document.getElementById('lvSelCount');
+  if (c) c.textContent = listSel.size;
+}
+
+function renderListColsMenu() {
+  const m = document.getElementById('lvColsMenu');
+  if (!m) return;
+  m.innerHTML = LV_COLUMNS.map(c => {
+    const locked = c.opt ? '' : ' disabled';
+    return `<label class="lv-col-item${c.opt ? '' : ' locked'}">`
+      + `<input type="checkbox" ${lvColOn[c.key] ? 'checked' : ''}${locked}`
+      + ` onchange="toggleListCol('${c.key}', this.checked)">`
+      + escHtml(c.label) + '</label>';
+  }).join('');
+}
+
+// ---- 视图切换 ----
+function setView(mode) {
+  listViewMode = mode === 'list' ? 'list' : 'board';
+  const isList = listViewMode === 'list';
+  const kv = document.getElementById('kanbanView');
+  const lv = document.getElementById('listView');
+  const vb = document.getElementById('viewBoardBtn');
+  const vl = document.getElementById('viewListBtn');
+  if (kv) kv.style.display = isList ? 'none' : '';
+  if (lv) lv.style.display = isList ? '' : 'none';
+  if (vb) vb.classList.toggle('active', !isList);
+  if (vl) vl.classList.toggle('active', isList);
+  const cm = document.getElementById('lvColsMenu');
+  if (cm) cm.classList.remove('show');
+  saveListPrefs();
+  if (isList) renderList();
+}
+
+// 筛选条件变化：两个视图一起刷新（列表要回到第 1 页）
+function refreshViews() {
   renderColumns();
+  if (listViewMode === 'list') { listPage = 1; renderList(); }
+}
+
+// ---- 批量操作 ----
+function batchAction(kind) {
+  const ids = Array.from(listSel).filter(id => tasks.some(t => t.id === id));
+  if (!ids.length) return;
+
+  const eligible = (allowed) => ids.filter(id => {
+    const t = tasks.find(x => x.id === id);
+    return t && allowed.indexOf(t.status) !== -1;
+  });
+
+  if (kind === 'start') {
+    const ok = eligible(['pending']);
+    if (!ok.length) { alert('选中的任务里没有「待处理」状态的任务。'); return; }
+    applyBatchStatus(ok, 'processing', '启动', ids.length);
+  } else if (kind === 'complete') {
+    const ok = eligible(['pending', 'processing']);
+    if (!ok.length) { alert('只有「待处理」或「处理中」的任务可以标记完成。'); return; }
+    applyBatchStatus(ok, 'completed', '完成', ids.length);
+  } else if (kind === 'cancel') {
+    const ok = eligible(['pending', 'processing']);
+    if (!ok.length) { alert('只有「待处理」或「处理中」的任务可以取消。'); return; }
+    if (ok.length < ids.length) alert(`另有 ${ids.length - ok.length} 个任务状态不适用，将跳过。`);
+    pendingCancel = { ids: ok, toStatus: 'cancelled' };
+    document.getElementById('cancelReasonInput').value = '';
+    openModal('modalCancel');
+  } else if (kind === 'delete') {
+    if (!confirm(`确定要删除选中的 ${ids.length} 个任务吗？\n任务将移入回收站，7 天后自动清除。`)) return;
+    bulkTrash(ids);
+  } else if (kind === 'export') {
+    exportListCSV(ids);
+  }
+}
+
+// 批量流转：只写一次云端、渲染一次，避免 N 次全表 upsert
+function applyBatchStatus(ids, target, verb, pickedTotal) {
+  const moved = [];
+  ids.forEach(id => {
+    const t = tasks.find(x => x.id === id);
+    if (!t) return;
+    applyStatusFields(t, target);
+    moved.push(t);
+  });
+  if (!moved.length) return;
+  const rest = tasks.filter(t => t.status === target && moved.indexOf(t) === -1);
+  let n = rest.length;
+  moved.forEach(t => { t.order = n++; });
+  saveToStorage();
+  listSel.clear();
+  renderAll();
+  if (typeof pickedTotal === 'number' && moved.length < pickedTotal) {
+    alert(`已${verb} ${moved.length} 个任务，跳过 ${pickedTotal - moved.length} 个（状态不适用）。`);
+  }
+}
+
+function bulkTrash(ids) {
+  const now = new Date().toISOString();
+  let n = 0;
+  ids.forEach(id => {
+    const t = tasks.find(x => x.id === id);
+    if (!t) return;
+    deletedTasks.push(Object.assign({}, t, { deletedAt: now }));
+    n++;
+  });
+  if (!n) return;
+  tasks = tasks.filter(t => ids.indexOf(t.id) === -1);
+  gcTrash();
+  listSel.clear();
+  saveToStorage();
+  renderAll();
+}
+
+function exportListCSV(ids) {
+  const picked = ids.map(id => tasks.find(t => t.id === id)).filter(Boolean);
+  if (!picked.length) return;
+  const cols = [
+    ['任务编号', t => t.id],
+    ['标题', t => t.title],
+    ['任务描述', t => t.description || ''],
+    ['状态', t => STATUS_LABELS[t.status] || t.status],
+    ['优先级', t => t.priority || 'P2'],
+    ['负责人', t => t.assignee || ''],
+    ['所属部门', t => t.department || ''],
+    ['客户来源', t => t.source || ''],
+    ['截止时间', t => t.dueDate || ''],
+    ['标签', t => (Array.isArray(t.tags) ? t.tags.join(' / ') : '')],
+    ['创建时间', t => formatTime(t.createdAt)],
+    ['开始时间', t => t.startedAt ? formatTime(t.startedAt) : ''],
+    ['完成时间', t => t.completedAt ? formatTime(t.completedAt) : ''],
+    ['取消时间', t => t.cancelledAt ? formatTime(t.cancelledAt) : ''],
+    ['最后更新', t => formatTime(t.updatedAt)],
+    ['取消原因', t => t.cancelReason || '']
+  ];
+  let csv = '\uFEFF';   // BOM，Excel 中文不乱码
+  csv += cols.map(c => csvCell(c[0])).join(',') + '\n';
+  picked.forEach(t => { csv += cols.map(c => csvCell(c[1](t))).join(',') + '\n'; });
+  const d = new Date();
+  const stamp = '' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `任务列表_选中${picked.length}条_${stamp}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ---- 任务卡片 ----
@@ -2159,7 +2774,7 @@ function renderTrash() {
   }).join('');
 }
 
-// 取消确认（同时服务于按钮触发与拖拽触发；拖拽会带 toIndex）
+// 取消确认（服务于：按钮触发、拖拽触发带 toIndex、列表批量触发带 ids）
 function doConfirmCancel() {
   const reason = document.getElementById('cancelReasonInput').value.trim();
   if (!reason) {
@@ -2168,23 +2783,34 @@ function doConfirmCancel() {
     return;
   }
   if (pendingCancel) {
-    const task = tasks.find(t => t.id === pendingCancel.taskId);
-    if (task) {
-      const toStatus = pendingCancel.toStatus || 'cancelled';
+    const toStatus = pendingCancel.toStatus || 'cancelled';
+    const ids = (Array.isArray(pendingCancel.ids) && pendingCancel.ids.length)
+      ? pendingCancel.ids
+      : (pendingCancel.taskId ? [pendingCancel.taskId] : []);
+    const moved = [];
+    ids.forEach(id => {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
       applyStatusFields(task, toStatus, { reason: reason });
-      const sameStatus = tasks.filter(t => t.status === toStatus && t.id !== task.id);
-      const idx = pendingCancel.toIndex;
-      if (idx !== undefined && idx <= sameStatus.length) {
-        sameStatus.splice(idx, 0, task);
+      moved.push(task);
+    });
+    if (moved.length) {
+      const rest = tasks.filter(t => t.status === toStatus && moved.indexOf(t) === -1);
+      const idx = (moved.length === 1) ? pendingCancel.toIndex : undefined;
+      if (idx !== undefined && idx <= rest.length) {
+        rest.splice(idx, 0, moved[0]);
       } else {
-        sameStatus.push(task);
+        Array.prototype.push.apply(rest, moved);
       }
-      sameStatus.forEach((t, i) => t.order = i);
+      rest.forEach((t, i) => t.order = i);
       saveToStorage();
       renderAll();
       // 抽屉打开时同步刷新，避免详情停留在旧状态
       const _dw = document.getElementById('taskDrawer');
-      if (_dw && _dw.classList.contains('show')) showDetail(task.id);
+      if (_dw && _dw.classList.contains('show')) {
+        if (drawerTaskId && tasks.some(t => t.id === drawerTaskId)) showDetail(drawerTaskId);
+        else closeTaskDrawer();
+      }
     }
     pendingCancel = null;
   }
@@ -2197,6 +2823,8 @@ function doConfirmCancel() {
 // ============================================================
 //  任务详情 Drawer
 // ============================================================
+let drawerTaskId = null;   // 当前抽屉展示的任务 id
+
 // 由现有时间戳推导操作日志（真实数据，无需额外表）
 function buildActivityLog(task) {
   const who = task.assignee || '—';
@@ -2218,6 +2846,7 @@ function buildActivityLog(task) {
 function showDetail(taskId) {
   const task = tasks.find(t => t.id === taskId);
   if (!task) return;
+  drawerTaskId = taskId;
   const st = task.status;
   const stLabel = STATUS_LABELS[st] || st;
   const prio = task.priority || 'P2';
@@ -2340,6 +2969,7 @@ function showDetail(taskId) {
 }
 
 function closeTaskDrawer() {
+  drawerTaskId = null;
   document.getElementById('drawerOverlay').classList.remove('show');
   const dr = document.getElementById('taskDrawer');
   if (dr) { dr.classList.remove('show'); dr.setAttribute('aria-hidden', 'true'); }
@@ -3177,12 +3807,28 @@ function setupEventListeners() {
     if (el) el.addEventListener('input', e => {
       const f = document.getElementById('filterSearch');
       if (f && f.value !== e.target.value) f.value = e.target.value;
-      renderColumns();
+      refreshViews();
     });
   });
   ['filterDept', 'filterAssignee', 'filterPriority', 'filterStatus'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.addEventListener('change', renderColumns);
+    if (el) el.addEventListener('change', refreshViews);
+  });
+
+  // 列表模式：每页条数 + 列设置下拉
+  const lvPs = document.getElementById('lvPageSize');
+  if (lvPs) lvPs.addEventListener('change', () => {
+    const v = Number(lvPs.value);
+    listPageSize = ([20, 50, 100].indexOf(v) >= 0) ? v : 20;
+    listPage = 1;
+    saveListPrefs();
+    renderList();
+  });
+  const lvCb = document.getElementById('lvColsBtn');
+  const lvCm = document.getElementById('lvColsMenu');
+  if (lvCb && lvCm) lvCb.addEventListener('click', e => {
+    e.stopPropagation();
+    lvCm.classList.toggle('show');
   });
 
   // 用户下拉菜单
@@ -3200,24 +3846,11 @@ function setupEventListeners() {
   bindClick('ddTheme', () => { if (userDropdown) userDropdown.classList.remove('show'); toggleTheme(); });
   bindClick('ddExport', () => { if (userDropdown) userDropdown.classList.remove('show'); exportStatsCSV(); });
 
-  // 看板 / 列表 视图切换（列表模式在后续阶段实现）
+  // 看板 / 列表 视图切换
   const vb = document.getElementById('viewBoardBtn');
   const vl = document.getElementById('viewListBtn');
-  if (vb && vl) {
-    vb.addEventListener('click', () => {
-      vb.classList.add('active'); vl.classList.remove('active');
-      document.getElementById('kanbanView').style.display = '';
-      document.getElementById('listView').style.display = 'none';
-    });
-    vl.addEventListener('click', () => {
-      vl.classList.add('active'); vb.classList.remove('active');
-      document.getElementById('kanbanView').style.display = 'none';
-      const lv = document.getElementById('listView');
-      lv.style.display = '';
-      lv.innerHTML = '<div class="empty-state" style="padding:64px 16px">'
-        + '<div class="t">列表模式</div><div class="s">表格视图将在下一阶段实现</div></div>';
-    });
-  }
+  if (vb) vb.addEventListener('click', () => setView('board'));
+  if (vl) vl.addEventListener('click', () => setView('list'));
 
   // 已完成列：查看全部 / 收起
   // 趋势图独立周期
@@ -3244,6 +3877,8 @@ function setupEventListeners() {
   document.addEventListener('click', () => {
     if (userDropdown) userDropdown.classList.remove('show');
     if (typeof closeCardMenus === 'function') closeCardMenus();
+    const lvCm = document.getElementById('lvColsMenu');
+    if (lvCm) lvCm.classList.remove('show');
   });
   // AI 设置与汇报（汇报展示在独立页面 report.html）
   document.getElementById('aiSettingsBtn').addEventListener('click', openAiSettings);
