@@ -783,6 +783,9 @@ html[data-theme="dark"] .ai-ic { background: rgba(139,92,246,0.22); color: #B49C
   .kpi { min-height: 92px; }
   .panel-head-right { margin-left: 0; }
   .tabs { overflow-x: auto; }
+  /* 统计面板已改为 static（掉到页面底部），回收站浮动按钮不能再按
+     「面板固定贴屏幕底」的 208px 定位，否则会悬在内容区中段压住列表/卡片 */
+  .trash-container { bottom: 24px; }
 }
 
 
