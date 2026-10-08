@@ -1311,9 +1311,9 @@ html[data-theme="dark"] .ai-ic { background: rgba(139,92,246,0.22); color: #B49C
 </div>
 
 <!-- ===== Modal: New Task ===== -->
-<div class="modal-overlay" id="modalNewTask">
+<div class="modal-overlay" id="modalTaskForm">
   <div class="modal-card">
-    <h2>新建任务</h2>
+    <h2 id="taskFormTitle">新建任务</h2>
     <div class="modal-grid">
       <div class="form-group full">
         <label>任务名称 *</label>
@@ -1354,8 +1354,8 @@ html[data-theme="dark"] .ai-ic { background: rgba(139,92,246,0.22); color: #B49C
       </div>
     </div>
     <div class="modal-actions">
-      <button class="btn-secondary" onclick="closeModal('modalNewTask')">取消</button>
-      <button class="btn-primary" id="confirmNewTask">创建任务</button>
+      <button class="btn-secondary" id="cancelTaskForm">取消</button>
+      <button class="btn-primary" id="confirmTaskForm">创建任务</button>
     </div>
   </div>
 </div>
@@ -1847,6 +1847,139 @@ function createTask(title, desc, source, extra) {
   return task;
 }
 
+// ============================================================
+//  阶段 5：任务表单（新建 / 编辑 双模式）
+//  · create：清空字段 → createTask()
+//  · edit  ：预填字段 → saveTaskEdit()（只动内容字段，状态与时间戳一律不碰）
+// ============================================================
+let formMode = 'create';
+let formTaskId = null;
+let formDirty = false;
+
+function setFormField(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.value = (value == null) ? '' : value;
+}
+
+function openTaskForm(mode, taskId) {
+  const isEdit = mode === 'edit';
+  const task = isEdit ? tasks.find(t => t.id === taskId) : null;
+  if (isEdit && !task) return;
+
+  formMode = isEdit ? 'edit' : 'create';
+  formTaskId = isEdit ? task.id : null;
+  formDirty = false;
+
+  const titleEl = document.getElementById('taskFormTitle');
+  const btnEl = document.getElementById('confirmTaskForm');
+  if (titleEl) titleEl.textContent = isEdit ? '编辑任务' : '新建任务';
+  if (btnEl) btnEl.textContent = isEdit ? '保存修改' : '创建任务';
+
+  if (isEdit) {
+    setFormField('newTaskTitle', task.title);
+    setFormField('newTaskDesc', task.description);
+    setFormField('newTaskDept', task.department);
+    setFormField('newTaskAssignee', task.assignee);
+    setFormField('newTaskSource', task.source);
+    setFormField('newTaskPriority', task.priority || 'P2');
+    setFormField('newTaskDue', task.dueDate || '');
+    setFormField('newTaskTags', Array.isArray(task.tags) ? task.tags.join(', ') : '');
+  } else {
+    ['newTaskTitle', 'newTaskDesc', 'newTaskDept', 'newTaskAssignee',
+     'newTaskSource', 'newTaskDue', 'newTaskTags'].forEach(id => setFormField(id, ''));
+    setFormField('newTaskPriority', 'P2');
+  }
+
+  const t = document.getElementById('newTaskTitle');
+  if (t) { t.style.borderColor = ''; t.placeholder = '请输入任务名称'; }
+
+  openModal('modalTaskForm');
+  setTimeout(() => { const x = document.getElementById('newTaskTitle'); if (x) x.focus(); }, 100);
+}
+
+// 读取表单 → 已解析的数据对象；名称为空时返回 { error: 'title' }
+function readTaskForm() {
+  const title = document.getElementById('newTaskTitle').value.trim();
+  if (!title) return { error: 'title' };
+  const tagsRaw = document.getElementById('newTaskTags').value.trim();
+  return {
+    title: title,
+    description: document.getElementById('newTaskDesc').value.trim(),
+    source: document.getElementById('newTaskSource').value.trim(),
+    department: document.getElementById('newTaskDept').value.trim(),
+    assignee: document.getElementById('newTaskAssignee').value.trim(),
+    priority: document.getElementById('newTaskPriority').value || 'P2',
+    dueDate: document.getElementById('newTaskDue').value || '',
+    tags: tagsRaw ? tagsRaw.split(/[,，]/).map(s => s.trim()).filter(Boolean) : []
+  };
+}
+
+function submitTaskForm() {
+  const data = readTaskForm();
+  if (data.error) {
+    const el = document.getElementById('newTaskTitle');
+    el.style.borderColor = 'var(--danger)';
+    el.placeholder = '请输入任务名称（必填）';
+    el.focus();
+    return;
+  }
+  if (formMode === 'edit') {
+    if (!saveTaskEdit(formTaskId, data)) {
+      formDirty = false;
+      closeModal('modalTaskForm');
+      alert('该任务已不存在，可能已被删除，修改未保存。');
+      return;
+    }
+  } else {
+    createTask(data.title, data.description, data.source, {
+      priority: data.priority,
+      assignee: data.assignee,
+      department: data.department,
+      dueDate: data.dueDate,
+      tags: data.tags
+    });
+  }
+  formDirty = false;
+  closeModal('modalTaskForm');
+}
+
+// 只覆盖表单负责的 8 个内容字段。
+// 明确不动：id / status / order / createdAt / startedAt / completedAt / cancelledAt / cancelReason
+function saveTaskEdit(id, data) {
+  const t = tasks.find(x => x.id === id);
+  if (!t) return false;
+  t.title = data.title;
+  t.description = data.description;
+  t.source = data.source;
+  t.department = data.department;
+  t.assignee = data.assignee;
+  t.priority = data.priority;
+  t.dueDate = data.dueDate;
+  t.tags = data.tags;
+  t.updatedAt = new Date().toISOString();   // 所有任务都要有最后更新时间
+  saveToStorage();
+  renderAll();
+  refreshFilterOptions();
+  const _dw = document.getElementById('taskDrawer');
+  if (_dw && _dw.classList.contains('show') && drawerTaskId === id) showDetail(id);
+  return true;
+}
+
+// 关闭前的未保存确认（表单专用，其余弹窗直接关）
+function requestCloseModal(id) {
+  if (id === 'modalTaskForm' && formDirty) {
+    if (!confirm('有未保存的修改，确定要放弃吗？')) return;
+  }
+  formDirty = false;
+  closeModal(id);
+}
+
+// 卡片 ⋯ 菜单入口
+function editTask(taskId) {
+  closeCardMenus();
+  openTaskForm('edit', taskId);
+}
+
 function updateTaskStatus(taskId, newStatus, cancelReason) {
   const task = tasks.find(t => t.id === taskId);
   if (!task) return;
@@ -2010,22 +2143,6 @@ function renderColumns() {
     }
   });
   const moreBtn = document.getElementById('showAllCompleted');
-  // 侧栏：任务设置 / 帮助中心（占位）
-  const ss = document.getElementById('sideSettings');
-  if (ss) ss.addEventListener('click', () => {
-    alert('任务设置：可用于配置默认部门、负责人候选等（后续阶段实现）');
-  });
-  const sh = document.getElementById('sideHelp');
-  if (sh) sh.addEventListener('click', () => {
-    alert('帮助中心\n\n· 拖拽卡片可改变任务状态\n· 点击卡片查看详情\n· 卡片右下 ⋯ 可复制/移动/删除\n· 底部可切换统计周期并生成 AI 周报');
-  });
-
-  // 图表随窗口宽度自适应
-  let rzTimer = null;
-  window.addEventListener('resize', () => {
-    if (rzTimer) clearTimeout(rzTimer);
-    rzTimer = setTimeout(() => { try { renderTrendChart(); syncStatsHeight(); } catch (e) {} }, 180);
-  });
   if (moreBtn) moreBtn.textContent = showAllCompleted ? '收起 ←' : '查看全部 →';
 }
 
@@ -2553,6 +2670,7 @@ function renderCard(task) {
       ${tagsHtml}
       <div class="task-actions">${actions}</div>
       <div class="card-menu" id="menu-${task.id}">
+        <button class="dropdown-item" onclick="event.stopPropagation(); editTask('${task.id}')">编辑任务</button>
         <button class="dropdown-item" onclick="event.stopPropagation(); duplicateTask('${task.id}')">复制任务</button>
         <button class="dropdown-item" onclick="event.stopPropagation(); moveTaskMenu('${task.id}')">移动任务</button>
         <div class="dropdown-sep"></div>
@@ -2949,14 +3067,16 @@ function showDetail(taskId) {
   let foot = '';
   if (st === 'pending') {
     foot += `<button class="primary" onclick="drawerAction('start','${task.id}')">启动任务</button>`;
-    foot += `<button onclick="drawerAction('cancel','${task.id}')">取消任务</button>`;
   } else if (st === 'processing') {
     foot += `<button class="primary" onclick="drawerAction('complete','${task.id}')">完成任务</button>`;
-    foot += `<button onclick="drawerAction('cancel','${task.id}')">取消任务</button>`;
   } else if (st === 'completed') {
     foot += `<button class="ok" onclick="drawerAction('reopen','${task.id}')">重新打开</button>`;
   } else if (st === 'cancelled') {
     foot += `<button class="ok" onclick="drawerAction('restart','${task.id}')">重启任务</button>`;
+  }
+  foot += `<button onclick="openTaskForm('edit','${task.id}')">编辑</button>`;
+  if (st === 'pending' || st === 'processing') {
+    foot += `<button onclick="drawerAction('cancel','${task.id}')">取消任务</button>`;
   }
   foot += `<button class="danger" onclick="drawerAction('delete','${task.id}')">删除</button>`;
   document.getElementById('drawerFoot').innerHTML = foot;
@@ -3801,6 +3921,26 @@ function setupEventListeners() {
   const themeBtn = document.getElementById('themeToggleBtn');
   if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
 
+  // 侧栏：任务设置 / 帮助中心（占位）
+  // 注意：这三个元素是静态 HTML，监听只能绑一次。
+  // 之前它们挂在 renderColumns() 里，而 renderColumns() 每次 renderAll() 都会跑，
+  // 导致监听器不断累积（rzTimer 又是函数内变量，每个监听器各有各的计时器）。
+  const ss = document.getElementById('sideSettings');
+  if (ss) ss.addEventListener('click', () => {
+    alert('任务设置：可用于配置默认部门、负责人候选等（后续阶段实现）');
+  });
+  const sh = document.getElementById('sideHelp');
+  if (sh) sh.addEventListener('click', () => {
+    alert('帮助中心\n\n· 拖拽卡片可改变任务状态\n· 点击卡片查看详情\n· 卡片右下 ⋯ 可编辑/复制/移动/删除\n· 顶部可切换看板 / 列表，列表支持排序、分页与批量操作\n· 底部可切换统计周期并生成 AI 周报');
+  });
+
+  // 图表随窗口宽度自适应（只绑一次）
+  let rzTimer = null;
+  window.addEventListener('resize', () => {
+    if (rzTimer) clearTimeout(rzTimer);
+    rzTimer = setTimeout(() => { try { renderTrendChart(); syncStatsHeight(); } catch (e) {} }, 180);
+  });
+
   // 搜索与筛选
   ['filterSearch', 'globalSearch'].forEach(id => {
     const el = document.getElementById(id);
@@ -3886,37 +4026,16 @@ function setupEventListeners() {
   document.getElementById('aiTestBtn').addEventListener('click', testAiConnection);
   document.getElementById('aiClearBtn').addEventListener('click', clearAiKey);
   document.getElementById('aiReportBtn').addEventListener('click', onAiReportClick);
-  // New task
-  document.getElementById('btnNewTask').addEventListener('click', () => {
-    ['newTaskTitle', 'newTaskDesc', 'newTaskSource', 'newTaskDept',
-     'newTaskAssignee', 'newTaskDue', 'newTaskTags'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = '';
-    });
-    const pr = document.getElementById('newTaskPriority');
-    if (pr) pr.value = 'P2';
-    openModal('modalNewTask');
-    setTimeout(() => document.getElementById('newTaskTitle').focus(), 100);
-  });
-  document.getElementById('confirmNewTask').addEventListener('click', () => {
-    const title = document.getElementById('newTaskTitle').value.trim();
-    if (!title) {
-      document.getElementById('newTaskTitle').style.borderColor = 'var(--danger)';
-      document.getElementById('newTaskTitle').placeholder = '请输入任务名称（必填）';
-      return;
-    }
-    const desc = document.getElementById('newTaskDesc').value.trim();
-    const source = document.getElementById('newTaskSource').value.trim();
-    const tagsRaw = document.getElementById('newTaskTags').value.trim();
-    createTask(title, desc, source, {
-      priority: document.getElementById('newTaskPriority').value || 'P2',
-      assignee: document.getElementById('newTaskAssignee').value,
-      department: document.getElementById('newTaskDept').value,
-      dueDate: document.getElementById('newTaskDue').value || '',
-      tags: tagsRaw ? tagsRaw.split(/[,，]/).map(s => s.trim()).filter(Boolean) : []
-    });
-    closeModal('modalNewTask');
-  });
+  // 任务表单（新建 / 编辑 双模式）
+  document.getElementById('btnNewTask').addEventListener('click', () => openTaskForm('create'));
+  document.getElementById('confirmTaskForm').addEventListener('click', submitTaskForm);
+  document.getElementById('cancelTaskForm').addEventListener('click', () => requestCloseModal('modalTaskForm'));
+  const taskFormEl = document.getElementById('modalTaskForm');
+  if (taskFormEl) {
+    // 用户一旦改动表单内容，关闭时就要提示（程序化赋值不会触发 input/change）
+    taskFormEl.addEventListener('input', () => { formDirty = true; });
+    taskFormEl.addEventListener('change', () => { formDirty = true; });
+  }
   document.getElementById('newTaskTitle').addEventListener('input', () => {
     document.getElementById('newTaskTitle').style.borderColor = '';
   });
@@ -3942,13 +4061,13 @@ function setupEventListeners() {
   // Close modals on overlay click
   document.querySelectorAll('.modal-overlay').forEach(el => {
     el.addEventListener('click', e => {
-      if (e.target === el) closeModal(el.id);
+      if (e.target === el) requestCloseModal(el.id);
     });
   });
   // Keyboard: Escape to close modal
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-      document.querySelectorAll('.modal-overlay.show').forEach(el => closeModal(el.id));
+      document.querySelectorAll('.modal-overlay.show').forEach(el => requestCloseModal(el.id));
     }
   });
 }
