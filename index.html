@@ -2088,6 +2088,29 @@ function emptyStateHtml(status) {
     </div>`;
 }
 
+// ---- 耗时格式化（卡片 / 抽屉 / 列表 / KPI 共用一套，避免两处口径不一致） ----
+// 输入小时数，输出：
+//   < 1h        → 分钟       45m
+//   1h ~ 10h    → 一位小数    2.5h
+//   10h ~ 24h   → 整数小时    18h   （23.5h 起进位为 1d，避免出现自相矛盾的 24h）
+//   ≥ 24h       → Nd / Nd Mh  1d、1d1h、1d12h、2d2h、208d17h
+function fmtDur(hours) {
+  const totalMin = Math.round((Number(hours) || 0) * 60);
+  if (totalMin <= 0) return '0m';
+  if (totalMin < 60) return totalMin + 'm';
+
+  if (totalMin < 1440) {
+    const h = totalMin / 60;
+    if (h < 10) return (Math.round(h * 10) / 10) + 'h';
+    const r = Math.round(h);
+    return (r >= 24) ? '1d' : (r + 'h');
+  }
+
+  const d = Math.floor(totalMin / 1440);
+  const remH = Math.floor((totalMin % 1440) / 60);
+  return remH > 0 ? (d + 'd' + remH + 'h') : (d + 'd');
+}
+
 // ---- 耗时计算（完成：完成−启动；处理中：现在−启动） ----
 function elapsedText(task) {
   const start = task.startedAt;
@@ -2097,10 +2120,7 @@ function elapsedText(task) {
   if (!endIso) return '';
   const ms = new Date(endIso) - new Date(start);
   if (!(ms > 0)) return '';
-  const h = ms / 3600000;
-  if (h < 1) return Math.max(1, Math.round(ms / 60000)) + 'm';
-  if (h >= 10) return Math.round(h) + 'h';
-  return (Math.round(h * 10) / 10) + 'h';
+  return fmtDur(ms / 3600000);
 }
 
 // 截止日期显示 MM-DD
@@ -3449,7 +3469,8 @@ function computeKpis() {
     unit: (opts && opts.unit) || '',
     betterWhen: (opts && opts.betterWhen) || 'none',
     tone: (opts && opts.tone) || 't-blue',
-    decimals: (opts && opts.decimals) || 0
+    decimals: (opts && opts.decimals) || 0,
+    fmt: (opts && opts.fmt) || null      // 自定义格式化（耗时类 KPI 走 fmtDur，单位内嵌）
   });
 
   return [
@@ -3458,7 +3479,7 @@ function computeKpis() {
     mk('done', '完成任务', ICON_KPI.check, _countCompleted(start, end), _countCompleted(pStart, pEnd), { tone: 't-green' }),
     mk('cancelled', '取消任务', ICON_KPI.x, _countCancelled(start, end), _countCancelled(pStart, pEnd), { tone: 't-gray' }),
     mk('avg', '平均处理时长', ICON_KPI.clock, _avgHours(start, end), _avgHours(pStart, pEnd),
-       { unit: 'h', betterWhen: 'down', decimals: 1, tone: 't-sky' }),
+       { betterWhen: 'down', tone: 't-sky', fmt: fmtDur }),
     mk('ontime', '按时完成率', ICON_KPI.shield, _onTimeRate(start, end), _onTimeRate(pStart, pEnd),
        { unit: '%', betterWhen: 'up', tone: 't-purple' }),
     mk('overdue', '超期任务', ICON_KPI.alert, _overdueAt(now), _overdueAt(pEnd), { betterWhen: 'down', tone: 't-red' }),
@@ -3471,9 +3492,12 @@ function renderKpis() {
   if (!grid) return;
   const list = computeKpis();
   grid.innerHTML = list.map(k => {
-    const cur = k.decimals ? Number(k.cur).toFixed(k.decimals) : Math.round(k.cur);
+    // fmt 优先（耗时类 KPI 把单位内嵌进字符串）；否则按 decimals 走数字渲染
+    const fmtVal = v => k.fmt ? k.fmt(v)
+      : (k.decimals ? Number(v).toFixed(k.decimals) : String(Math.round(v)));
+    const cur = fmtVal(k.cur);
     const diff = k.cur - k.prev;
-    const absDiff = k.decimals ? Math.abs(diff).toFixed(k.decimals) : Math.round(Math.abs(diff));
+    const absDiff = fmtVal(Math.abs(diff));
     let cls = 'flat', arrow = '—';
     if (Math.abs(diff) > 1e-9) {
       const up = diff > 0;
@@ -3483,10 +3507,10 @@ function renderKpis() {
     }
     const deltaTxt = Math.abs(diff) <= 1e-9
       ? '<span class="flat">— 与上期持平</span>'
-      : `<span class="${cls}">${arrow} ${absDiff}${k.unit}</span><span>较上期</span>`;
+      : `<span class="${cls}">${arrow} ${absDiff}</span><span>较上期</span>`;
     return `<div class="kpi">
         <div class="kpi-top"><span class="kpi-ic ${k.tone}">${k.icon}</span><span class="kpi-label">${escHtml(k.label)}</span></div>
-        <div class="kpi-val">${cur}<span class="unit">${k.unit}</span></div>
+        <div class="kpi-val">${cur}${k.unit ? `<span class="unit">${k.unit}</span>` : ''}</div>
         <div class="kpi-delta">${deltaTxt}</div>
       </div>`;
   }).join('');
