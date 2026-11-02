@@ -382,6 +382,20 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
   font-size: 10.5px; padding: 1px 7px; border-radius: 5px;
   background: var(--primary-weak); color: var(--primary);
 }
+/* 任务分类徽标：描边 + 色点，与浅底实心的标签明确区分 */
+.cat-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 600; line-height: 1.6;
+  padding: 1px 8px 1px 6px; border-radius: 5px;
+  background: var(--surface-2); color: var(--text-2);
+  border: 1px solid var(--bd); white-space: nowrap;
+}
+.cat-badge::before {
+  content: ''; flex: none; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--primary);
+}
+/* 抽屉 / 列表里用同款，尺寸略大一点以适配字号 */
+.dr-item .cat-badge, .lv-table .cat-badge { font-size: 11.5px; padding: 1px 9px 1px 7px; }
 
 /* 卡片操作（hover 显现） */
 .task-actions {
@@ -1011,6 +1025,76 @@ html[data-theme="dark"] .ai-ic { background: rgba(139,92,246,0.22); color: #B49C
   .lv-title { max-width: none; }
 }
 
+/* ============================================================
+   任务分类：设置弹窗 + 已完成列「查看全部」按钮
+   ============================================================ */
+
+/* --- 已完成列底部的折叠/展开按钮（列头按钮的补充，就地可收起） --- */
+.column-body .more-link.more-bottom {
+  margin: 2px auto 0; padding: 7px 14px;
+  border: 1px solid var(--bd); border-radius: var(--r-ctl);
+  background: var(--surface); color: var(--text-2);
+  font-size: 12.5px; font-weight: 500; cursor: pointer;
+  transition: all var(--t); white-space: nowrap;
+}
+.column-body .more-link.more-bottom:hover {
+  border-color: var(--primary); color: var(--primary); background: var(--primary-weak);
+}
+
+/* --- 列头的「查看全部 / 收起」：只在可折叠时出现，做成轻量实心小胶囊 --- */
+.column-head .more-link {
+  margin-left: auto; padding: 3px 9px;
+  border: 1px solid var(--bd); border-radius: 999px;
+  background: var(--surface); color: var(--text-3);
+  font-size: 11.5px; font-weight: 600; cursor: pointer;
+  transition: all var(--t); white-space: nowrap;
+}
+.column-head .more-link:hover {
+  border-color: var(--primary); color: var(--primary); background: var(--primary-weak);
+}
+
+/* --- 分类管理弹窗 --- */
+.cat-hint {
+  font-size: 12px; color: var(--text-3); line-height: 1.6;
+  margin: -6px 0 var(--sp-3);
+}
+.cat-list {
+  max-height: 300px; overflow-y: auto;
+  border: 1px solid var(--bd); border-radius: var(--r-ctl);
+  background: var(--surface-2); padding: 4px;
+  margin-bottom: var(--sp-3);
+}
+.cat-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: 6px;
+  font-size: 13px; color: var(--text);
+}
+.cat-row:hover { background: var(--hover); }
+.cat-row .cat-name { flex: 1; min-width: 0; word-break: break-word; }
+.cat-row .cat-count { font-size: 11px; color: var(--text-3); flex: none; }
+.cat-del {
+  flex: none; width: 22px; height: 22px; border: none; border-radius: 6px;
+  background: transparent; color: var(--text-3); font-size: 15px; line-height: 1;
+  cursor: pointer; transition: all var(--t);
+}
+.cat-del:hover { background: var(--danger-weak); color: var(--danger); }
+.cat-empty {
+  text-align: center; padding: 22px 10px;
+  font-size: 12.5px; color: var(--text-3);
+}
+.cat-add { display: flex; gap: 8px; }
+.cat-add input {
+  flex: 1; min-width: 0; height: 36px; padding: 0 12px;
+  border: 1px solid var(--field-bd); border-radius: var(--r-ctl);
+  background: var(--field); color: var(--text); font-size: 13px;
+}
+.cat-add input:focus { outline: none; border-color: var(--primary); }
+/* 注意：.btn-primary 默认 width:100%，这里不在 .modal-actions 内，必须显式改回 auto */
+.cat-add button {
+  flex: none; width: auto; height: 36px; padding: 0 20px;
+  font-size: 13.5px; border-radius: var(--r-ctl);
+}
+
 </style>
 <!-- Supabase 客户端库（UMD 全局版，暴露 window.supabase） -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -1119,6 +1203,7 @@ html[data-theme="dark"] .ai-ic { background: rgba(139,92,246,0.22); color: #B49C
         <option value="P2">P2 中</option>
         <option value="P3">P3 低</option>
       </select>
+      <select class="filter-select" id="filterCategory"><option value="">全部分类</option></select>
       <select class="filter-select" id="filterStatus">
         <option value="">全部状态</option>
         <option value="pending">待处理</option>
@@ -1335,6 +1420,10 @@ html[data-theme="dark"] .ai-ic { background: rgba(139,92,246,0.22); color: #B49C
         <input type="text" id="newTaskAssignee" placeholder="如：张三">
       </div>
       <div class="form-group">
+        <label>任务分类</label>
+        <select id="newTaskCategory"></select>
+      </div>
+      <div class="form-group">
         <label>客户来源</label>
         <input type="text" id="newTaskSource" placeholder="如：荣耀商城">
       </div>
@@ -1351,7 +1440,7 @@ html[data-theme="dark"] .ai-ic { background: rgba(139,92,246,0.22); color: #B49C
         <label>截止时间</label>
         <input type="date" id="newTaskDue">
       </div>
-      <div class="form-group">
+      <div class="form-group full">
         <label>任务标签（逗号分隔）</label>
         <input type="text" id="newTaskTags" placeholder="如：生信, 紧急">
       </div>
@@ -1359,6 +1448,23 @@ html[data-theme="dark"] .ai-ic { background: rgba(139,92,246,0.22); color: #B49C
     <div class="modal-actions">
       <button class="btn-secondary" id="cancelTaskForm">取消</button>
       <button class="btn-primary" id="confirmTaskForm">创建任务</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: 分类管理 ===== -->
+<div class="modal-overlay" id="modalCategorySettings">
+  <div class="modal-card">
+    <h2>分类管理</h2>
+    <p class="cat-hint">分类用于标记任务的工作类别。删除选项不会改动已有任务的分类值，只是它不再出现在下拉里。</p>
+    <div class="cat-list" id="catList"></div>
+    <div class="cat-add">
+      <input type="text" id="catNewInput" placeholder="输入新分类名称，回车添加" maxlength="20">
+      <button class="btn-primary" id="catAddBtn">添加</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="catResetBtn">恢复默认</button>
+      <button class="btn-primary" onclick="requestCloseModal('modalCategorySettings')">完成</button>
     </div>
   </div>
 </div>
@@ -1485,9 +1591,11 @@ let showAllCompleted = false;   // 已完成列是否展开全部
 //  INIT
 // ============================================================
 function init() {
-  loadListPrefs();   // 列表模式的排序 / 分页 / 列显隐 / 上次视图
+  loadListPrefs();       // 列表模式的排序 / 分页 / 列显隐 / 上次视图
+  loadCategoriesLocal(); // 分类选项的本机缓存，保证下拉不会闪空
   setDefaultDates();
   setupEventListeners();
+  refreshCategoryOptions();
   // 检查 Supabase 是否已有会话（已登录则直接进入）
   sb.auth.getSession().then(({ data }) => {
     if (data.session) {
@@ -1577,6 +1685,7 @@ function toCloudRow(t) {
     priority: t.priority || 'P2',
     assignee: t.assignee || '',
     department: t.department || '',
+    category: t.category || '',
     due_date: t.dueDate || null,
     tags: Array.isArray(t.tags) ? t.tags : [],
     created_at: t.createdAt || new Date().toISOString(),
@@ -1600,6 +1709,7 @@ function fromCloudRow(r) {
     priority: r.priority || 'P2',
     assignee: r.assignee || '',
     department: r.department || '',
+    category: r.category || '',
     dueDate: r.due_date || '',
     tags: r.tags || [],
     createdAt: r.created_at,
@@ -1836,6 +1946,7 @@ function createTask(title, desc, source, extra) {
     priority: e.priority || 'P2',
     assignee: (e.assignee || '').trim(),
     department: (e.department || '').trim(),
+    category: (e.category || '').trim(),
     dueDate: e.dueDate || '',
     tags: Array.isArray(e.tags) ? e.tags : [],
     createdAt: now,
@@ -1848,6 +1959,133 @@ function createTask(title, desc, source, extra) {
   saveToStorage();
   renderAll();
   return task;
+}
+
+// ============================================================
+//  任务分类（单选）
+//  · 任务的分类值存在 tasks.category
+//  · 可增减的选项列表存在 user_settings.categories（账号级，跨设备同步）
+//  · 空数组 = 未自定义 → 回落到内置预设
+// ============================================================
+const DEFAULT_CATEGORIES = ['生产任务', '功能开发', '流程维护', '数据库维护', '文件体系', '技术支持', '其他'];
+const CATEGORY_LS_KEY = 'kanban_categories';   // 本机缓存，首屏即可用，避免下拉闪空
+let taskCategories = DEFAULT_CATEGORIES.slice();
+
+function loadCategoriesLocal() {
+  try {
+    const raw = localStorage.getItem(CATEGORY_LS_KEY);
+    if (!raw) return;
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr) && arr.length) taskCategories = arr.filter(x => typeof x === 'string' && x.trim());
+  } catch (e) { /* 忽略损坏的缓存 */ }
+}
+
+// 下拉候选 = 已配置的选项 ∪ 任务上实际用到的分类（防止历史值在下拉里消失）
+function allCategoryOptions() {
+  const out = [];
+  taskCategories.forEach(c => { if (c && out.indexOf(c) === -1) out.push(c); });
+  tasks.forEach(t => {
+    const c = (t.category || '').trim();
+    if (c && out.indexOf(c) === -1) out.push(c);
+  });
+  return out;
+}
+
+// 重建：表单下拉 / 筛选下拉（都保留当前选中）
+function refreshCategoryOptions() {
+  const opts = allCategoryOptions();
+
+  const sel = document.getElementById('newTaskCategory');
+  if (sel) {
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">未分类</option>'
+      + opts.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
+    sel.value = opts.indexOf(cur) !== -1 ? cur : '';
+  }
+
+  const flt = document.getElementById('filterCategory');
+  if (flt) {
+    const cur = flt.value;
+    flt.innerHTML = '<option value="">全部分类</option>'
+      + opts.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
+    flt.value = opts.indexOf(cur) !== -1 ? cur : '';
+  }
+}
+
+// 保存选项列表：本地缓存 + 云端（只写 categories 一列，不碰 AI 配置）
+async function saveCategories(list) {
+  taskCategories = list.slice();
+  try { localStorage.setItem(CATEGORY_LS_KEY, JSON.stringify(taskCategories)); } catch (e) {}
+  refreshCategoryOptions();
+  renderColumns();
+  if (!currentUser) return;
+  const { error } = await sb.from('user_settings').upsert({
+    user_id: currentUser.id,
+    categories: taskCategories,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'user_id' });
+  if (error) {
+    console.error('保存分类选项失败:', error.message);
+    alert('分类保存到云端失败：' + error.message);
+  }
+}
+
+// ---- 分类管理弹窗 ----
+function openCategorySettings() {
+  renderCategoryList();
+  const inp = document.getElementById('catNewInput');
+  if (inp) inp.value = '';
+  openModal('modalCategorySettings');
+  setTimeout(() => { const x = document.getElementById('catNewInput'); if (x) x.focus(); }, 100);
+}
+
+function renderCategoryList() {
+  const box = document.getElementById('catList');
+  if (!box) return;
+  if (!taskCategories.length) {
+    box.innerHTML = '<div class="cat-empty">还没有分类，在下面输入框里添加</div>';
+    return;
+  }
+  box.innerHTML = taskCategories.map((c, i) => {
+    const used = tasks.filter(t => (t.category || '') === c).length;
+    return `<div class="cat-row">
+        <span class="cat-name">${escHtml(c)}</span>
+        ${used ? `<span class="cat-count">${used} 个任务</span>` : ''}
+        <button class="cat-del" title="删除该分类" onclick="removeCategory(${i})">×</button>
+      </div>`;
+  }).join('');
+}
+
+async function addCategory() {
+  const inp = document.getElementById('catNewInput');
+  if (!inp) return;
+  const v = inp.value.trim();
+  if (!v) { inp.focus(); return; }
+  if (v.length > 20) { alert('分类名称最长 20 个字'); return; }
+  if (taskCategories.indexOf(v) !== -1) { alert('该分类已存在'); inp.select(); return; }
+  inp.value = '';
+  await saveCategories(taskCategories.concat([v]));
+  renderCategoryList();
+  inp.focus();
+}
+
+async function removeCategory(index) {
+  const name = taskCategories[index];
+  if (name == null) return;
+  if (taskCategories.length <= 1) { alert('至少保留一个分类'); return; }
+  const used = tasks.filter(t => (t.category || '') === name).length;
+  const msg = used
+    ? `「${name}」正被 ${used} 个任务使用。\n删除后这些任务仍保留该分类，但下拉里不再出现。确定删除？`
+    : `确定删除分类「${name}」？`;
+  if (!confirm(msg)) return;
+  await saveCategories(taskCategories.filter((_, k) => k !== index));
+  renderCategoryList();
+}
+
+async function resetCategories() {
+  if (!confirm('恢复为内置的 7 个预设分类？当前自定义选项将被覆盖。')) return;
+  await saveCategories(DEFAULT_CATEGORIES.slice());
+  renderCategoryList();
 }
 
 // ============================================================
@@ -1884,12 +2122,14 @@ function openTaskForm(mode, taskId) {
     setFormField('newTaskDept', task.department);
     setFormField('newTaskAssignee', task.assignee);
     setFormField('newTaskSource', task.source);
+    setFormField('newTaskCategory', task.category || '');
     setFormField('newTaskPriority', task.priority || 'P2');
     setFormField('newTaskDue', task.dueDate || '');
     setFormField('newTaskTags', Array.isArray(task.tags) ? task.tags.join(', ') : '');
   } else {
     ['newTaskTitle', 'newTaskDesc', 'newTaskDept', 'newTaskAssignee',
      'newTaskSource', 'newTaskDue', 'newTaskTags'].forEach(id => setFormField(id, ''));
+    setFormField('newTaskCategory', '');
     setFormField('newTaskPriority', 'P2');
   }
 
@@ -1911,6 +2151,7 @@ function readTaskForm() {
     source: document.getElementById('newTaskSource').value.trim(),
     department: document.getElementById('newTaskDept').value.trim(),
     assignee: document.getElementById('newTaskAssignee').value.trim(),
+    category: document.getElementById('newTaskCategory').value || '',
     priority: document.getElementById('newTaskPriority').value || 'P2',
     dueDate: document.getElementById('newTaskDue').value || '',
     tags: tagsRaw ? tagsRaw.split(/[,，]/).map(s => s.trim()).filter(Boolean) : []
@@ -1938,6 +2179,7 @@ function submitTaskForm() {
       priority: data.priority,
       assignee: data.assignee,
       department: data.department,
+      category: data.category,
       dueDate: data.dueDate,
       tags: data.tags
     });
@@ -1946,7 +2188,7 @@ function submitTaskForm() {
   closeModal('modalTaskForm');
 }
 
-// 只覆盖表单负责的 8 个内容字段。
+// 只覆盖表单负责的 9 个内容字段。
 // 明确不动：id / status / order / createdAt / startedAt / completedAt / cancelledAt / cancelReason
 function saveTaskEdit(id, data) {
   const t = tasks.find(x => x.id === id);
@@ -1956,6 +2198,7 @@ function saveTaskEdit(id, data) {
   t.source = data.source;
   t.department = data.department;
   t.assignee = data.assignee;
+  t.category = data.category;
   t.priority = data.priority;
   t.dueDate = data.dueDate;
   t.tags = data.tags;
@@ -1963,6 +2206,7 @@ function saveTaskEdit(id, data) {
   saveToStorage();
   renderAll();
   refreshFilterOptions();
+  refreshCategoryOptions();
   const _dw = document.getElementById('taskDrawer');
   if (_dw && _dw.classList.contains('show') && drawerTaskId === id) showDetail(id);
   return true;
@@ -2040,14 +2284,16 @@ function getFilteredTasks() {
   const asg = document.getElementById('filterAssignee')?.value || '';
   const prio = document.getElementById('filterPriority')?.value || '';
   const st = document.getElementById('filterStatus')?.value || '';
+  const cat = document.getElementById('filterCategory')?.value || '';
   return tasks.filter(t => {
     if (st && t.status !== st) return false;
     if (dept && (t.department || '') !== dept) return false;
     if (asg && (t.assignee || '') !== asg) return false;
     if (prio && (t.priority || 'P2') !== prio) return false;
+    if (cat && (t.category || '') !== cat) return false;
     if (kw) {
       const hay = (t.id + ' ' + t.title + ' ' + (t.description || '') + ' ' + (t.source || '')
-        + ' ' + (t.assignee || '') + ' ' + (t.department || '')).toLowerCase();
+        + ' ' + (t.assignee || '') + ' ' + (t.department || '') + ' ' + (t.category || '')).toLowerCase();
       if (hay.indexOf(kw) === -1) return false;
     }
     return true;
@@ -2067,6 +2313,7 @@ function refreshFilterOptions() {
   };
   fill('filterDept', tasks.map(t => t.department), '全部部门');
   fill('filterAssignee', tasks.map(t => t.assignee), '全部负责人');
+  refreshCategoryOptions();   // 分类候选 = 已配置选项 ∪ 任务实际值
 }
 
 // ---- 空状态（轻量，不抢注意力） ----
@@ -2140,17 +2387,33 @@ function isOverdue(task) {
 
 function renderColumns() {
   const filtered = getFilteredTasks();
+  const completedFiltered = filtered.filter(t => t.status === 'completed');
+  const COMPLETED_LIMIT = 5;                       // 已完成列折叠时显示的条数
+  const completedCollapsible = completedFiltered.length > COMPLETED_LIMIT;
+
   ['pending', 'processing', 'completed', 'cancelled'].forEach(status => {
     const col = document.getElementById(`col-${status}`);
     if (!col) return;
     const totalAll = tasks.filter(t => t.status === status).length;
     document.getElementById(`count-${status}`).textContent = totalAll;
 
-    let items = filtered.filter(t => t.status === status).sort((a, b) => a.order - b.order);
+    let items = filtered.filter(t => t.status === status);
+    if (status === 'completed') {
+      // 已完成列按完成时间倒序（最新的在最上面）；无完成时间或相同时用 order 兜底
+      items.sort((a, b) => {
+        const ta = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+        const tb = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+        if (ta !== tb) return tb - ta;
+        return (a.order || 0) - (b.order || 0);
+      });
+    } else {
+      items.sort((a, b) => a.order - b.order);
+    }
+
+    // 折叠：只在已完成列、且确实超出限制时
     let truncated = false;
-    // 已完成列默认只显示最近 5 条，避免无限堆叠
-    if (status === 'completed' && !showAllCompleted && items.length > 5) {
-      items = items.slice(0, 5);
+    if (status === 'completed' && !showAllCompleted && completedCollapsible) {
+      items = items.slice(0, COMPLETED_LIMIT);
       truncated = true;
     }
 
@@ -2159,14 +2422,26 @@ function renderColumns() {
       col.classList.add('empty');
     } else {
       col.classList.remove('empty');
-      col.innerHTML = items.map(renderCard).join('')
-        + (truncated
-            ? `<button class="more-link" style="margin:2px auto 0" onclick="toggleShowAllCompleted()">还有 ${items.length === 0 ? 0 : (filtered.filter(t => t.status === 'completed').length - 5)} 条，查看全部 →</button>`
-            : '');
+      // 底部的折叠/展开入口：展开后仍留在底部，就地可收起，不用滚回列头
+      let footer = '';
+      if (status === 'completed' && completedCollapsible) {
+        const hidden = completedFiltered.length - COMPLETED_LIMIT;
+        footer = showAllCompleted
+          ? `<button class="more-link more-bottom" onclick="toggleShowAllCompleted()">收起 ↑</button>`
+          : `<button class="more-link more-bottom" onclick="toggleShowAllCompleted()">还有 ${hidden} 条 · 查看全部 →</button>`;
+      }
+      col.innerHTML = items.map(renderCard).join('') + footer;
     }
   });
+
+  // 列头的「查看全部 / 收起」：只在可折叠时出现，与底部按钮状态同步
   const moreBtn = document.getElementById('showAllCompleted');
-  if (moreBtn) moreBtn.textContent = showAllCompleted ? '收起 ←' : '查看全部 →';
+  if (moreBtn) {
+    moreBtn.style.display = completedCollapsible ? '' : 'none';
+    moreBtn.textContent = showAllCompleted
+      ? '收起 ↑'
+      : `查看全部 (${completedFiltered.length})`;
+  }
 }
 
 function toggleShowAllCompleted() {
@@ -2188,6 +2463,7 @@ const LV_COLUMNS = [
   { key: 'id',          label: '任务编号', on: true,  opt: false, sortable: true  },
   { key: 'title',       label: '任务标题', on: true,  opt: false, sortable: true  },
   { key: 'status',      label: '状态',     on: true,  opt: false, sortable: true  },
+  { key: 'category',    label: '任务分类', on: true,  opt: true,  sortable: true  },
   { key: 'priority',    label: '优先级',   on: true,  opt: false, sortable: true  },
   { key: 'assignee',    label: '负责人',   on: true,  opt: false, sortable: true  },
   { key: 'department',  label: '所属部门', on: true,  opt: false, sortable: true  },
@@ -2260,6 +2536,8 @@ function lvCellHtml(t, col) {
     }
     case 'assignee':   return t.assignee   ? escHtml(t.assignee)   : dim;
     case 'department': return t.department ? escHtml(t.department) : dim;
+    case 'category':   return (t.category || '').trim()
+                              ? `<span class="cat-badge">${escHtml(t.category.trim())}</span>` : dim;
     case 'source':     return t.source     ? escHtml(t.source)     : dim;
     case 'dueDate': {
       if (!t.dueDate) return dim;
@@ -2596,6 +2874,7 @@ function exportListCSV(ids) {
     ['标题', t => t.title],
     ['任务描述', t => t.description || ''],
     ['状态', t => STATUS_LABELS[t.status] || t.status],
+    ['任务分类', t => t.category || ''],
     ['优先级', t => t.priority || 'P2'],
     ['负责人', t => t.assignee || ''],
     ['所属部门', t => t.department || ''],
@@ -2656,9 +2935,15 @@ function renderCard(task) {
     whenHtml = `<div class="card-when"><span class="mi">创建 ${escHtml(shortTime(task.createdAt))}</span></div>`;
   }
 
-  // 标签
-  const tagsHtml = (Array.isArray(task.tags) && task.tags.length)
-    ? `<div class="card-tags">${task.tags.map(t => `<span class="tag">${escHtml(t)}</span>`).join('')}</div>`
+  // 分类 + 标签
+  const catHtml = (task.category || '').trim()
+    ? `<span class="cat-badge">${escHtml(task.category.trim())}</span>`
+    : '';
+  const tagList = (Array.isArray(task.tags) && task.tags.length)
+    ? task.tags.map(t => `<span class="tag">${escHtml(t)}</span>`).join('')
+    : '';
+  const tagsHtml = (catHtml || tagList)
+    ? `<div class="card-tags">${catHtml}${tagList}</div>`
     : '';
 
   // 快捷操作
@@ -3009,6 +3294,7 @@ function showDetail(taskId) {
 
   // 基本信息
   const basic = [
+    item('任务分类', task.category ? `<span class="cat-badge">${escHtml(task.category)}</span>` : dash),
     item('负责人', task.assignee ? escHtml(task.assignee) : dash),
     item('所属部门', task.department ? escHtml(task.department) : dash),
     item('客户来源', task.source ? escHtml(task.source) : dash),
@@ -3290,7 +3576,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // If same column, just reorder
     if (toStatus === dragFromStatus) {
-      reorderTask(dragTaskId, toStatus, targetIndex);
+      // 已完成列按完成时间倒序显示，手动排序没有意义 —— 直接忽略同列重排
+      if (toStatus !== 'completed') {
+        reorderTask(dragTaskId, toStatus, targetIndex);
+      }
     } else {
       // Moving to different column
       if (toStatus === 'cancelled') {
@@ -3674,6 +3963,7 @@ function exportStatsCSV() {
     title: t.title,
     description: t.description || '',
     status: STATUS_LABELS[t.status],
+    category: t.category || '',
     source: t.source,
     createdAt: formatTime(t.createdAt),
     startedAt: t.startedAt ? formatTime(t.startedAt) : '',
@@ -3691,9 +3981,9 @@ function exportStatsCSV() {
   csv += csvCell('已完成') + ',' + csvCell(counts.completed) + '\n';
   csv += csvCell('已取消') + ',' + csvCell(counts.cancelled) + '\n';
   csv += '\n' + csvCell('任务明细') + '\n';
-  csv += ['任务编号', '标题', '任务描述', '状态', '客户来源', '创建时间', '启动时间', '完成时间', '取消时间', '最后更新', '取消原因'].map(csvCell).join(',') + '\n';
+  csv += ['任务编号', '标题', '任务描述', '状态', '任务分类', '客户来源', '创建时间', '启动时间', '完成时间', '取消时间', '最后更新', '取消原因'].map(csvCell).join(',') + '\n';
   details.forEach(d => {
-    csv += [d.id, d.title, d.description, d.status, d.source, d.createdAt,
+    csv += [d.id, d.title, d.description, d.status, d.category, d.source, d.createdAt,
             d.startedAt, d.completedAt, d.cancelledAt, d.updatedAt, d.cancelReason].map(csvCell).join(',') + '\n';
   });
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -3751,7 +4041,7 @@ async function loadAiSettings() {
   if (!currentUser) return;
   const { data, error } = await sb
     .from('user_settings')
-    .select('deepseek_key, model')
+    .select('deepseek_key, model, categories')
     .eq('user_id', currentUser.id)
     .maybeSingle();
   if (error) {
@@ -3762,6 +4052,12 @@ async function loadAiSettings() {
     aiConfig.key = data.deepseek_key || '';
     aiConfig.model = data.model || 'deepseek-flash';
     cacheAiSettingsLocal(aiConfig.key, aiConfig.model);
+    // 分类选项（空数组表示未自定义，保持内置预设）
+    if (Array.isArray(data.categories) && data.categories.length) {
+      taskCategories = data.categories.filter(x => typeof x === 'string' && x.trim());
+      try { localStorage.setItem(CATEGORY_LS_KEY, JSON.stringify(taskCategories)); } catch (e) {}
+      refreshCategoryOptions();
+    }
   } else {
     // 云端还没有记录：若本地已有配置，则顺带上传一次（便于老用户迁移）
     if (aiConfig.key) {
@@ -3953,13 +4249,21 @@ function setupEventListeners() {
   // 之前它们挂在 renderColumns() 里，而 renderColumns() 每次 renderAll() 都会跑，
   // 导致监听器不断累积（rzTimer 又是函数内变量，每个监听器各有各的计时器）。
   const ss = document.getElementById('sideSettings');
-  if (ss) ss.addEventListener('click', () => {
-    alert('任务设置：可用于配置默认部门、负责人候选等（后续阶段实现）');
-  });
+  if (ss) ss.addEventListener('click', openCategorySettings);
   const sh = document.getElementById('sideHelp');
   if (sh) sh.addEventListener('click', () => {
-    alert('帮助中心\n\n· 拖拽卡片可改变任务状态\n· 点击卡片查看详情\n· 卡片右下 ⋯ 可编辑/复制/移动/删除\n· 顶部可切换看板 / 列表，列表支持排序、分页与批量操作\n· 底部可切换统计周期并生成 AI 周报');
+    alert('帮助中心\n\n· 拖拽卡片可改变任务状态（已完成列按完成时间自动排序）\n· 点击卡片查看详情\n· 卡片右下 ⋯ 可编辑/复制/移动/删除\n· 顶部可切换看板 / 列表，列表支持排序、分页与批量操作\n· 「任务设置」可增减任务分类\n· 底部可切换统计周期并生成 AI 周报');
   });
+
+  // 分类管理弹窗
+  const catAddBtn = document.getElementById('catAddBtn');
+  if (catAddBtn) catAddBtn.addEventListener('click', addCategory);
+  const catNewInput = document.getElementById('catNewInput');
+  if (catNewInput) catNewInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); addCategory(); }
+  });
+  const catResetBtn = document.getElementById('catResetBtn');
+  if (catResetBtn) catResetBtn.addEventListener('click', resetCategories);
 
   // 图表随窗口宽度自适应（只绑一次）
   let rzTimer = null;
@@ -3977,7 +4281,7 @@ function setupEventListeners() {
       refreshViews();
     });
   });
-  ['filterDept', 'filterAssignee', 'filterPriority', 'filterStatus'].forEach(id => {
+  ['filterDept', 'filterAssignee', 'filterPriority', 'filterStatus', 'filterCategory'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', refreshViews);
   });
