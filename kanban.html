@@ -391,18 +391,17 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
   background: transparent; color: var(--text-3); font-weight: 500;
   box-shadow: inset 0 0 0 1px var(--bd);
 }
-/* 含高优标签时卡片顶部的红色角标 */
+/* 含高优标签时卡片顶部的角标：淡底红字，不用实心红，避免抢过标签本身的红 */
 .hi-flag {
   flex: none; display: inline-flex; align-items: center; justify-content: center;
   width: 16px; height: 16px; border-radius: 4px;
-  background: var(--danger); color: #fff; font-size: 10px; line-height: 1;
-  box-shadow: 0 0 0 2px var(--danger-weak);
+  background: var(--danger-weak); color: var(--danger);
+  font-size: 10px; line-height: 1; opacity: .9;
 }
 /* 列表行：含高优标签时标题前的红点 */
 .lv-hi-dot {
   display: inline-block; width: 6px; height: 6px; border-radius: 50%;
-  background: var(--danger); margin-right: 6px; vertical-align: middle;
-  box-shadow: 0 0 0 2px var(--danger-weak);
+  background: var(--danger); opacity: .75; margin-right: 6px; vertical-align: middle;
 }
 /* 抽屉：高优提示条 */
 .dr-alert {
@@ -2149,6 +2148,15 @@ function tagClass(t) { return isHighTag(t) ? 'hi' : (isLowTag(t) ? 'lo' : ''); }
 function taskHasHighTag(task) {
   return Array.isArray(task && task.tags) && task.tags.some(isHighTag);
 }
+// 已完成的任务不再做高优提示：事情已经做完，紧急/重要已无意义，
+// 卡片角标、列表红点、抽屉提示条和标签红色全部去掉，让已完成列保持安静。
+function showHighHint(task) {
+  return taskHasHighTag(task) && task && task.status !== 'completed';
+}
+// 渲染单个任务上的标签时用的类名（已完成的标签一律回到普通样式）
+function tagClassIn(task, t) {
+  return showHighHint(task) ? tagClass(t) : '';
+}
 
 // 去重 + 解矛盾：保留靠后的那条（用户最近的操作），丢弃与它冲突的对立方
 function resolveTagConflicts(list) {
@@ -2649,7 +2657,7 @@ function lvCellHtml(t, col) {
   switch (col.key) {
     case 'id':         return `<span class="lv-id">${escHtml(t.id)}</span>`;
     case 'title': {
-      const flag = taskHasHighTag(t)
+      const flag = showHighHint(t)
         ? '<span class="lv-hi-dot" title="含高优先级标签（重要 / 紧急 / 加急）"></span>'
         : '';
       return `${flag}<span class="lv-title">${escHtml(t.title)}</span>`;
@@ -2678,7 +2686,7 @@ function lvCellHtml(t, col) {
       const tags = Array.isArray(t.tags) ? t.tags : [];
       return tags.length
         ? tags.map(x => {
-            const cls = tagClass(x);
+            const cls = tagClassIn(t, x);
             return `<span class="dr-tag${cls ? ' ' + cls : ''}">${escHtml(x)}</span>`;
           }).join(' ')
         : dim;
@@ -3064,20 +3072,20 @@ function renderCard(task) {
     whenHtml = `<div class="card-when"><span class="mi">创建 ${escHtml(shortTime(task.createdAt))}</span></div>`;
   }
 
-  // 分类 + 标签（高优标签实心红，低权标签灰色描边）
+  // 分类 + 标签（高优标签实心红，低权标签灰色描边；已完成任务一律回到普通样式）
   const catHtml = (task.category || '').trim()
     ? `<span class="cat-badge">${escHtml(task.category.trim())}</span>`
     : '';
   const tagList = (Array.isArray(task.tags) && task.tags.length)
     ? task.tags.map(t => {
-        const cls = tagClass(t);
+        const cls = tagClassIn(task, t);
         return `<span class="tag${cls ? ' ' + cls : ''}">${escHtml(t)}</span>`;
       }).join('')
     : '';
   const tagsHtml = (catHtml || tagList)
     ? `<div class="card-tags">${catHtml}${tagList}</div>`
     : '';
-  const highFlag = taskHasHighTag(task)
+  const highFlag = showHighHint(task)
     ? '<span class="hi-flag" title="含高优先级标签（重要 / 紧急 / 加急）">⚡</span>'
     : '';
 
@@ -3493,9 +3501,9 @@ function showDetail(taskId) {
     ${(Array.isArray(task.tags) && task.tags.length) ? `
     <div class="dr-sec">
       <div class="dr-sec-title">任务标签</div>
-      ${taskHasHighTag(task) ? '<div class="dr-alert">该任务含高优先级标签（重要 / 紧急 / 加急）</div>' : ''}
+      ${showHighHint(task) ? '<div class="dr-alert">该任务含高优先级标签（重要 / 紧急 / 加急）</div>' : ''}
       <div class="dr-tags">${task.tags.map(t => {
-        const cls = tagClass(t);
+        const cls = tagClassIn(task, t);
         return `<span class="dr-tag${cls ? ' ' + cls : ''}">${escHtml(t)}</span>`;
       }).join('')}</div>
     </div>` : ''}
