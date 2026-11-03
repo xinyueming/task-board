@@ -382,6 +382,47 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
   font-size: 10.5px; padding: 1px 7px; border-radius: 5px;
   background: var(--primary-weak); color: var(--primary);
 }
+/* 标签分级：重要/紧急/加急 = 高优（实心红）；不重要/不紧急 = 低权（灰色描边）
+   用 inset box-shadow 而不是 border，保证三种标签盒模型高度一致、不会把行撑歪 */
+.tag.hi, .dr-tag.hi {
+  background: var(--danger); color: #fff; font-weight: 700;
+}
+.tag.lo, .dr-tag.lo {
+  background: transparent; color: var(--text-3); font-weight: 500;
+  box-shadow: inset 0 0 0 1px var(--bd);
+}
+/* 含高优标签时卡片顶部的红色角标 */
+.hi-flag {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 4px;
+  background: var(--danger); color: #fff; font-size: 10px; line-height: 1;
+  box-shadow: 0 0 0 2px var(--danger-weak);
+}
+/* 列表行：含高优标签时标题前的红点 */
+.lv-hi-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--danger); margin-right: 6px; vertical-align: middle;
+  box-shadow: 0 0 0 2px var(--danger-weak);
+}
+/* 抽屉：高优提示条 */
+.dr-alert {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 9px; padding: 7px 11px; border-radius: var(--r-ctl);
+  background: var(--danger-weak); color: var(--danger);
+  font-size: 12px; font-weight: 600;
+}
+.dr-alert::before { content: '⚡'; font-size: 12px; }
+/* 表单：预设标签胶囊选择器 */
+.tag-picker { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
+.tag-pick {
+  padding: 4px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--bd); background: var(--surface); color: var(--text-2);
+  font-size: 12px; font-weight: 500; line-height: 1.5; transition: all var(--t);
+}
+.tag-pick:hover { border-color: var(--text-3); color: var(--text); }
+.tag-pick.on { background: var(--primary-weak); border-color: var(--primary); color: var(--primary); font-weight: 600; }
+.tag-pick.hi.on { background: var(--danger); border-color: var(--danger); color: #fff; font-weight: 700; }
+.tag-pick.lo.on { background: var(--hover); border-color: var(--text-3); color: var(--text); }
 /* 任务分类徽标：描边 + 色点，与浅底实心的标签明确区分 */
 .cat-badge {
   display: inline-flex; align-items: center; gap: 5px;
@@ -1441,8 +1482,9 @@ html[data-theme="dark"] .ai-ic { background: rgba(139,92,246,0.22); color: #B49C
         <input type="date" id="newTaskDue">
       </div>
       <div class="form-group full">
-        <label>任务标签（逗号分隔）</label>
-        <input type="text" id="newTaskTags" placeholder="如：生信, 紧急">
+        <label>任务标签（可多选，可组合）</label>
+        <div class="tag-picker" id="taskTagPicker"></div>
+        <input type="text" id="newTaskTags" placeholder="自定义标签，逗号分隔（如：续费, 重点客户）">
       </div>
     </div>
     <div class="modal-actions">
@@ -2089,6 +2131,66 @@ async function resetCategories() {
 }
 
 // ============================================================
+//  任务标签：预设 + 分级（高优标签要做显著提示）
+//  · 标签仍是自由数组（tasks.tags text[]），预设只是 5 个常量
+//  · 重要/紧急/加急 → 高优：实心红 + 卡片角标 / 列表红点 / 抽屉提示条
+//  · 不重要/不紧急 → 低权：灰色描边
+//  · 重要↔不重要、紧急↔不紧急 互斥；加急与紧急可共存
+// ============================================================
+const PRESET_TAGS = ['重要', '紧急', '不重要', '不紧急', '加急'];
+const HIGH_TAGS = ['重要', '紧急', '加急'];
+const LOW_TAGS = ['不重要', '不紧急'];
+const TAG_CONFLICTS = { '重要': '不重要', '不重要': '重要', '紧急': '不紧急', '不紧急': '紧急' };
+
+function normTag(t) { return String(t == null ? '' : t).trim(); }
+function isHighTag(t) { return HIGH_TAGS.indexOf(normTag(t)) !== -1; }
+function isLowTag(t) { return LOW_TAGS.indexOf(normTag(t)) !== -1; }
+function tagClass(t) { return isHighTag(t) ? 'hi' : (isLowTag(t) ? 'lo' : ''); }
+function taskHasHighTag(task) {
+  return Array.isArray(task && task.tags) && task.tags.some(isHighTag);
+}
+
+// 去重 + 解矛盾：保留靠后的那条（用户最近的操作），丢弃与它冲突的对立方
+function resolveTagConflicts(list) {
+  const out = [];
+  for (let i = list.length - 1; i >= 0; i--) {
+    const t = normTag(list[i]);
+    if (!t) continue;
+    if (out.indexOf(t) !== -1) continue;
+    const c = TAG_CONFLICTS[t];
+    if (c && out.indexOf(c) !== -1) continue;
+    out.unshift(t);
+  }
+  return out;
+}
+
+// ---- 表单里的预设胶囊 ----
+let formPresetSel = new Set();
+
+function renderTagPicker() {
+  const box = document.getElementById('taskTagPicker');
+  if (!box) return;
+  box.innerHTML = PRESET_TAGS.map(t => {
+    const on = formPresetSel.has(t);
+    const cls = tagClass(t);
+    return `<button type="button" class="tag-pick${cls ? ' ' + cls : ''}${on ? ' on' : ''}"`
+      + ` onclick="togglePresetTag('${t}')">${escHtml(t)}</button>`;
+  }).join('');
+}
+
+function togglePresetTag(t) {
+  if (formPresetSel.has(t)) {
+    formPresetSel.delete(t);
+  } else {
+    formPresetSel.add(t);
+    const c = TAG_CONFLICTS[t];      // 自动互斥：重要↔不重要、紧急↔不紧急
+    if (c) formPresetSel.delete(c);
+  }
+  formDirty = true;                  // 按钮点击不触发 input/change，需手动标脏
+  renderTagPicker();
+}
+
+// ============================================================
 //  阶段 5：任务表单（新建 / 编辑 双模式）
 //  · create：清空字段 → createTask()
 //  · edit  ：预填字段 → saveTaskEdit()（只动内容字段，状态与时间戳一律不碰）
@@ -2125,13 +2227,28 @@ function openTaskForm(mode, taskId) {
     setFormField('newTaskCategory', task.category || '');
     setFormField('newTaskPriority', task.priority || 'P2');
     setFormField('newTaskDue', task.dueDate || '');
-    setFormField('newTaskTags', Array.isArray(task.tags) ? task.tags.join(', ') : '');
   } else {
     ['newTaskTitle', 'newTaskDesc', 'newTaskDept', 'newTaskAssignee',
      'newTaskSource', 'newTaskDue', 'newTaskTags'].forEach(id => setFormField(id, ''));
     setFormField('newTaskCategory', '');
     setFormField('newTaskPriority', 'P2');
   }
+
+  // 标签：命中的预设进胶囊选择器，其余留在自定义输入框里，避免历史标签丢失
+  formPresetSel = new Set();
+  const customTags = [];
+  if (isEdit && Array.isArray(task.tags)) {
+    task.tags.forEach(x => {
+      const s = normTag(x);
+      if (!s) return;
+      if (PRESET_TAGS.indexOf(s) !== -1) formPresetSel.add(s);
+      else customTags.push(s);
+    });
+    setFormField('newTaskTags', customTags.join(', '));
+  } else {
+    setFormField('newTaskTags', '');
+  }
+  renderTagPicker();
 
   const t = document.getElementById('newTaskTitle');
   if (t) { t.style.borderColor = ''; t.placeholder = '请输入任务名称'; }
@@ -2145,6 +2262,9 @@ function readTaskForm() {
   const title = document.getElementById('newTaskTitle').value.trim();
   if (!title) return { error: 'title' };
   const tagsRaw = document.getElementById('newTaskTags').value.trim();
+  const custom = tagsRaw ? tagsRaw.split(/[,，]/).map(s => s.trim()).filter(Boolean) : [];
+  const picked = [];
+  formPresetSel.forEach(t => picked.push(t));
   return {
     title: title,
     description: document.getElementById('newTaskDesc').value.trim(),
@@ -2154,7 +2274,8 @@ function readTaskForm() {
     category: document.getElementById('newTaskCategory').value || '',
     priority: document.getElementById('newTaskPriority').value || 'P2',
     dueDate: document.getElementById('newTaskDue').value || '',
-    tags: tagsRaw ? tagsRaw.split(/[,，]/).map(s => s.trim()).filter(Boolean) : []
+    // 预设在前、自定义在后，统一去重并解掉「重要 + 不重要」这类矛盾
+    tags: resolveTagConflicts(picked.concat(custom))
   };
 }
 
@@ -2527,7 +2648,12 @@ function lvCellHtml(t, col) {
   const dim = '<span class="lv-dim">—</span>';
   switch (col.key) {
     case 'id':         return `<span class="lv-id">${escHtml(t.id)}</span>`;
-    case 'title':      return `<span class="lv-title">${escHtml(t.title)}</span>`;
+    case 'title': {
+      const flag = taskHasHighTag(t)
+        ? '<span class="lv-hi-dot" title="含高优先级标签（重要 / 紧急 / 加急）"></span>'
+        : '';
+      return `${flag}<span class="lv-title">${escHtml(t.title)}</span>`;
+    }
     case 'status':     return `<span class="dr-badge ${t.status}">${escHtml(STATUS_LABELS[t.status] || t.status)}</span>`;
     case 'priority': {
       const p = t.priority || 'P2';
@@ -2551,7 +2677,10 @@ function lvCellHtml(t, col) {
     case 'tags': {
       const tags = Array.isArray(t.tags) ? t.tags : [];
       return tags.length
-        ? tags.map(x => `<span class="dr-tag">${escHtml(x)}</span>`).join(' ')
+        ? tags.map(x => {
+            const cls = tagClass(x);
+            return `<span class="dr-tag${cls ? ' ' + cls : ''}">${escHtml(x)}</span>`;
+          }).join(' ')
         : dim;
     }
     case 'createdAt':
@@ -2935,15 +3064,21 @@ function renderCard(task) {
     whenHtml = `<div class="card-when"><span class="mi">创建 ${escHtml(shortTime(task.createdAt))}</span></div>`;
   }
 
-  // 分类 + 标签
+  // 分类 + 标签（高优标签实心红，低权标签灰色描边）
   const catHtml = (task.category || '').trim()
     ? `<span class="cat-badge">${escHtml(task.category.trim())}</span>`
     : '';
   const tagList = (Array.isArray(task.tags) && task.tags.length)
-    ? task.tags.map(t => `<span class="tag">${escHtml(t)}</span>`).join('')
+    ? task.tags.map(t => {
+        const cls = tagClass(t);
+        return `<span class="tag${cls ? ' ' + cls : ''}">${escHtml(t)}</span>`;
+      }).join('')
     : '';
   const tagsHtml = (catHtml || tagList)
     ? `<div class="card-tags">${catHtml}${tagList}</div>`
+    : '';
+  const highFlag = taskHasHighTag(task)
+    ? '<span class="hi-flag" title="含高优先级标签（重要 / 紧急 / 加急）">⚡</span>'
     : '';
 
   // 快捷操作
@@ -2964,6 +3099,7 @@ function renderCard(task) {
          ondragstart="onDragStart(event)" ondragend="onDragEnd(event)"
          onclick="showDetail('${task.id}')">
       <div class="card-top">
+        ${highFlag}
         <span class="card-id" onclick="event.stopPropagation(); showDetail('${task.id}')">${escHtml(task.id)}</span>
         <span class="prio ${prioCls}">${escHtml(prio)}</span>
         <span class="spacer"></span>
@@ -3357,7 +3493,11 @@ function showDetail(taskId) {
     ${(Array.isArray(task.tags) && task.tags.length) ? `
     <div class="dr-sec">
       <div class="dr-sec-title">任务标签</div>
-      <div class="dr-tags">${task.tags.map(t => `<span class="dr-tag">${escHtml(t)}</span>`).join('')}</div>
+      ${taskHasHighTag(task) ? '<div class="dr-alert">该任务含高优先级标签（重要 / 紧急 / 加急）</div>' : ''}
+      <div class="dr-tags">${task.tags.map(t => {
+        const cls = tagClass(t);
+        return `<span class="dr-tag${cls ? ' ' + cls : ''}">${escHtml(t)}</span>`;
+      }).join('')}</div>
     </div>` : ''}
 
     <div class="dr-sec">
