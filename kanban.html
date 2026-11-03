@@ -2148,12 +2148,14 @@ function tagClass(t) { return isHighTag(t) ? 'hi' : (isLowTag(t) ? 'lo' : ''); }
 function taskHasHighTag(task) {
   return Array.isArray(task && task.tags) && task.tags.some(isHighTag);
 }
-// 已完成的任务不再做高优提示：事情已经做完，紧急/重要已无意义，
-// 卡片角标、列表红点、抽屉提示条和标签红色全部去掉，让已完成列保持安静。
+// 终态任务（已完成 / 已取消）不再做高优提示：事情已经结束，重要/紧急已无意义，
+// 卡片角标、列表红点、抽屉提示条和标签红色全部去掉，让终态列保持安静。
+const HIGH_HINT_EXEMPT = ['completed', 'cancelled'];
 function showHighHint(task) {
-  return taskHasHighTag(task) && task && task.status !== 'completed';
+  if (!taskHasHighTag(task)) return false;
+  return HIGH_HINT_EXEMPT.indexOf(task && task.status) === -1;
 }
-// 渲染单个任务上的标签时用的类名（已完成的标签一律回到普通样式）
+// 渲染单个任务上的标签时用的类名（终态任务的标签一律回到普通样式）
 function tagClassIn(task, t) {
   return showHighHint(task) ? tagClass(t) : '';
 }
